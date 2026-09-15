@@ -1,0 +1,16 @@
+# Cấu hình danh sách mô hình và chuỗi dự phòng (fallback chain)
+# Thứ tự ưu tiên dự phòng: Gemini -> OpenRouter/auto -> Claude -> OpenAI
+
+fallbacks:
+  - provider: gemini
+    model: gemini/gemini-1.5-pro
+    timeout: 30
+  - provider: openrouter
+    model: openrouter/auto
+    timeout: 30
+  - provider: claude
+    model: anthropic/claude-3-5-sonnet-20241022
+    timeout: 30
+  - provider: openai
+    model: openai/gpt-4o
+    timeout: 30

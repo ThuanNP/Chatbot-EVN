@@ -1,16 +1,53 @@
 # Cấu hình danh sách mô hình và chuỗi dự phòng (fallback chain)
-# Thứ tự ưu tiên dự phòng: Gemini -> OpenRouter/auto -> Claude -> OpenAI
+# Thứ tự trong danh sách quyết định thứ tự ưu tiên thử nghiệm khi xảy ra sự cố.
+# Quy tắc: Mọi tên model và chuỗi dự phòng chỉ được khai báo tại tệp này (AGENTS.md).
 
-fallbacks:
-  - provider: gemini
-    model: gemini/gemini-1.5-pro
-    timeout: 30
-  - provider: openrouter
+chuoi_du_phong:
+  # Tầng 1: Google Gemini - Nhanh, giá rẻ nhất, ưu tiên phục vụ chính
+  - tang: 1
+    ten: gemini
+    model: gemini/gemini-3.6-flash
+    api_key_env: GOOGLE_API_KEY
+    gia_vao_usd_moi_trieu: 0.075    # 0.075 USD / 1M token vào (prompt <= 128k)
+    gia_ra_usd_moi_trieu: 0.30      # 0.30 USD / 1M token ra
+    timeout_giay: 60
+    ghi_chu: "Model nhanh và rẻ nhất thế hệ mới của Google. Ngày điền thông tin: 16/09/2026 (đã kiểm định kết nối thành công)"
+
+  # Tầng 2: OpenRouter Auto - Dự phòng linh hoạt đa nhà cung cấp
+  - tang: 2
+    ten: openrouter_auto
     model: openrouter/auto
-    timeout: 30
-  - provider: claude
-    model: anthropic/claude-3-5-sonnet-20241022
-    timeout: 30
-  - provider: openai
-    model: openai/gpt-4o
-    timeout: 30
+    api_key_env: OPENROUTER_API_KEY
+    gia_vao_usd_moi_trieu: 0.20     # Giá ước tính tham chiếu do router tự động chọn model
+    gia_ra_usd_moi_trieu: 0.80      # Giá ước tính tham chiếu
+    timeout_giay: 60
+    tham_so_them:
+      cost_tier: low
+    ghi_chu: "Bộ định tuyến tự chọn model; không tiền định - chỉ dùng làm dự phòng. Ngày điền thông tin: 16/09/2026 (đã kiểm định kết nối thành công)"
+
+  # Tầng 3: Anthropic Claude - Cân bằng tốc độ và chất lượng vượt trội
+  - tang: 3
+    ten: claude
+    model: anthropic/claude-3-5-haiku-20241022
+    api_key_env: ANTHROPIC_API_KEY
+    gia_vao_usd_moi_trieu: 0.80     # 0.80 USD / 1M token vào
+    gia_ra_usd_moi_trieu: 4.00      # 4.00 USD / 1M token ra
+    timeout_giay: 60
+    ghi_chu: "Model cân bằng tốc độ và chất lượng của Anthropic Claude. Ngày điền thông tin: 16/09/2026 (có thể đổi thành anthropic/claude-3-5-sonnet-20241022 nếu cần suy luận sâu hơn)"
+
+  # Tầng 4: OpenAI - Dự phòng chốt chặn cho môi trường sản xuất
+  - tang: 4
+    ten: openai
+    model: openai/gpt-4o-mini
+    api_key_env: OPENAI_API_KEY
+    gia_vao_usd_moi_trieu: 0.15     # 0.15 USD / 1M token vào
+    gia_ra_usd_moi_trieu: 0.60      # 0.60 USD / 1M token ra
+    timeout_giay: 60
+    ghi_chu: "Model mặc định cho môi trường sản xuất của OpenAI. Ngày điền thông tin: 16/09/2026 (có thể đổi thành openai/gpt-4o nếu dùng bản flagship)"
+
+# Cấu hình tham số chung cho toàn bộ chuỗi dự phòng
+cai_dat_chung:
+  so_lan_thu_lai_moi_tang: 2        # Số lần thử lại tối đa cho mỗi tầng trước khi chuyển tiếp
+  giay_gian_cach_dau: 1.0           # Khoảng thời gian giãn cách ban đầu (giây) theo cấp số nhân
+  timeout_mac_dinh_giay: 60         # Thời gian chờ tối đa mặc định cho mỗi cuộc gọi
+  gioi_han_token_ra: 4096           # Giới hạn số lượng token tối đa trong phản hồi

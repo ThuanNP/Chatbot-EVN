@@ -9,10 +9,13 @@ from datetime import datetime, timezone
 import logging
 from typing import Generator, Optional
 
+import uuid
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     DateTime,
     Float,
+    ForeignKey,
     Index,
     Integer,
     String,
@@ -24,6 +27,7 @@ from sqlalchemy.orm import (
     Mapped,
     Session,
     mapped_column,
+    relationship,
     sessionmaker,
 )
 
@@ -35,6 +39,107 @@ logger = logging.getLogger(__name__)
 class Base(DeclarativeBase):
     """Lớp cơ sở cho toàn bộ các model SQLAlchemy."""
     pass
+
+
+class HoiThoai(Base):
+    """Mô hình bảng phiên hội thoại của người dùng."""
+
+    __tablename__ = "hoi_thoai"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    nguoi_dung_id: Mapped[str] = mapped_column(
+        String(100),
+        default="khach",
+        nullable=False,
+    )
+    tieu_de: Mapped[str] = mapped_column(
+        String(255),
+        default="Cuộc trò chuyện mới",
+        nullable=False,
+    )
+    tao_luc: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    cap_nhat_luc: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    # Quan hệ một-nhiều với TinNhan, tự động xoá cascade khi phiên hội thoại bị xoá
+    tin_nhan: Mapped[list["TinNhan"]] = relationship(
+        "TinNhan",
+        back_populates="hoi_thoai",
+        cascade="all, delete-orphan",
+        order_by="TinNhan.tao_luc",
+    )
+
+    __table_args__ = (
+        # Chỉ mục phục vụ tra cứu danh sách hội thoại của người dùng theo thời gian cập nhật
+        Index("ix_hoi_thoai_nguoi_dung_cap_nhat", "nguoi_dung_id", "cap_nhat_luc"),
+    )
+
+
+class TinNhan(Base):
+    """Mô hình bảng tin nhắn trong từng phiên hội thoại."""
+
+    __tablename__ = "tin_nhan"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    hoi_thoai_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("hoi_thoai.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    vai_tro: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+    )
+    noi_dung: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+    token_uoc_tinh: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    tang_phuc_vu: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    tao_luc: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    # Quan hệ ngược lại với phiên hội thoại
+    hoi_thoai: Mapped["HoiThoai"] = relationship(
+        "HoiThoai",
+        back_populates="tin_nhan",
+    )
+
+    __table_args__ = (
+        # Chỉ mục phục vụ lấy danh sách tin nhắn theo thứ tự thời gian trong cuộc hội thoại
+        Index("ix_tin_nhan_hoi_thoai_tao_luc", "hoi_thoai_id", "tao_luc"),
+        # Ràng buộc vai trò chỉ được phép là 'user' hoặc 'assistant'
+        CheckConstraint(
+            "vai_tro IN ('user', 'assistant')",
+            name="ck_tin_nhan_vai_tro",
+        ),
+    )
 
 
 class LuotGoi(Base):

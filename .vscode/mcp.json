@@ -1,0 +1,9 @@
+{
+    "servers": {
+        "winget-mcp": {
+            "type": "stdio",
+            "command": "C:\\Users\\thuannp\\AppData\\Local\\Microsoft\\WindowsApps\\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\\WindowsPackageManagerMCPServer.exe"
+        }
+    },
+    "inputs": []
+}

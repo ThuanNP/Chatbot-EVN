@@ -299,7 +299,7 @@ async def _tao_luong_phat(
     )
     logger.info(
         f"[Streaming] Hoàn tất luồng phát từ tầng {tang.tang} ({tang.model}): "
-        f"{tong_token_vao} token vào, {tong_token_ra} token ra, "
+        f"token_vao={tong_token_vao}, token_ra={tong_token_ra}, "
         f"chi phí ước tính: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"
     )
 
@@ -477,7 +477,7 @@ async def goi_mo_hinh(
                     # Ghi log bắt buộc theo Quy tắc 4 AGENTS.md
                     logger.info(
                         f"Phục vụ thành công từ tầng {tang.tang} ({model_thuc_te}): "
-                        f"{token_vao} token vào, {token_ra} token ra, "
+                        f"token_vao={token_vao}, token_ra={token_ra}, "
                         f"chi phí ước tính: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"
                     )
 
@@ -792,7 +792,7 @@ async def goi_mo_hinh_theo_dong(
                 # Ghi log bắt buộc theo Quy tắc 4 AGENTS.md
                 logger.info(
                     f"Phục vụ thành công luồng phát từ tầng {tang.tang} ({model_thuc_te}): "
-                    f"{tong_token_vao} token vào, {tong_token_ra} token ra, "
+                    f"token_vao={tong_token_vao}, token_ra={tong_token_ra}, "
                     f"chi phí ước tính: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"
                 )
 

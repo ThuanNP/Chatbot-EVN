@@ -22,6 +22,12 @@ from app.llm.router import goi_mo_hinh_theo_dong
 # Nạp biến môi trường từ tệp .env khi khởi chạy ứng dụng
 load_dotenv()
 
+# Cấu hình mức độ ghi log cấp hệ thống để hiển thị đầy đủ thông tin định tuyến và token
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+
 logger = logging.getLogger(__name__)
 
 

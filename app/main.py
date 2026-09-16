@@ -1,15 +1,22 @@
 """Điểm khởi chạy ứng dụng FastAPI cho Chatbot EVN."""
 
+from contextlib import asynccontextmanager
 import json
 import logging
 from typing import Any, Dict, List, Optional, Union
 
-from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from dotenv import load_dotenv
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, StreamingResponse
+from pydantic import BaseModel
 
 from app.config import lay_cau_hinh
+from app.core.database import khoi_tao_db
+from app.llm.chi_phi import (
+    VuotNganSachError,
+    kiem_tra_ngan_sach,
+    lay_thong_ke_chi_phi_ngay,
+)
 from app.llm.router import goi_mo_hinh_theo_dong
 
 # Nạp biến môi trường từ tệp .env khi khởi chạy ứng dụng
@@ -17,11 +24,23 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Quản lý vòng đời ứng dụng: khởi tạo cơ sở dữ liệu khi khởi động."""
+    try:
+        khoi_tao_db()
+    except Exception as e:
+        logger.warning(f"Không thể khởi tạo cơ sở dữ liệu lúc khởi động: {e}")
+    yield
+
+
 # Khởi tạo ứng dụng FastAPI
 app = FastAPI(
     title="Chatbot EVN API",
     description="Hệ thống AI Chatbot phục vụ nghiệp vụ EVN với chuỗi dự phòng đa mô hình",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
@@ -63,6 +82,12 @@ async def trang_chu():
     }
 
 
+@app.get("/chi-phi")
+async def xem_chi_phi():
+    """Endpoint trả về chi phí hôm nay, ngân sách ngày, phân rã theo tầng và tỷ lệ rơi tầng."""
+    return lay_thong_ke_chi_phi_ngay()
+
+
 @app.post("/chat/stream")
 async def chat_stream(request: Request):
     """Endpoint phát phản hồi theo dòng Server-Sent Events (SSE).
@@ -72,6 +97,15 @@ async def chat_stream(request: Request):
     để vô hiệu hoá tính năng gom đệm của các proxy ngược (như Nginx).
     Mỗi sự kiện là một dòng data: chứa JSON với 3 loại sự kiện: 'manh', 'xong', 'loi'.
     """
+    # Kiểm tra trần ngân sách ngày trước khi gọi mô hình. Vượt thì từ chối ngay với HTTP 503.
+    try:
+        kiem_tra_ngan_sach()
+    except VuotNganSachError as e:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": str(e), "loai": "vuot_ngan_sach"},
+        )
+
     body_bytes = await request.body()
     body_str = body_bytes.decode("utf-8", errors="replace").strip()
 
@@ -160,6 +194,16 @@ async def chat_stream(request: Request):
                         "van_ban_da_nhan": manh.van_ban_da_nhan,
                     }
                     yield f"data: {json.dumps(du_lieu, ensure_ascii=False)}\n\n"
+        except VuotNganSachError as e:
+            logger.error(f"[Chat Stream Endpoint] Vượt trần ngân sách ngày: {e}")
+            du_lieu_loi = {
+                "loai": "loi",
+                "su_kien": "loi",
+                "thong_diep_loi": str(e),
+                "loi": str(e),
+                "van_ban_da_nhan": van_ban_tich_luy,
+            }
+            yield f"data: {json.dumps(du_lieu_loi, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.error(f"[Chat Stream Endpoint] Lỗi xảy ra trong luồng SSE: {e}")
             du_lieu_loi = {
@@ -181,5 +225,3 @@ async def chat_stream(request: Request):
         media_type="text/event-stream",
         headers=headers,
     )
-
-

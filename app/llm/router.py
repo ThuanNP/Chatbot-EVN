@@ -45,7 +45,15 @@ from litellm.exceptions import (
 )
 
 from app.config import CauHinhTang, doc_cau_hinh_models
-from app.llm.chi_phi import tinh_chi_phi_usd
+from app.llm.chi_phi import (
+    VuotNganSachError,
+    cap_nhat_ly_do_hong_tang_1,
+    ghi_nhan_luot_goi,
+    kiem_tra_ngan_sach,
+    tinh_chi_phi_usd,
+    tinh_ty_le_roi_tang_1h,
+    uoc_tinh_chi_phi,
+)
 
 # Tắt bớt thông tin gỡ lỗi thừa từ litellm
 litellm.suppress_debug_info = True
@@ -275,11 +283,19 @@ async def _tao_luong_phat(
 
     # Tính độ trễ và chi phí khi luồng phát kết thúc
     do_tre_ms = (time.perf_counter() - thoi_gian_bat_dau) * 1000.0
-    chi_phi_usd = tinh_chi_phi_usd(
-        tong_token_vao,
-        tong_token_ra,
-        tang.gia_vao_usd_moi_trieu,
-        tang.gia_ra_usd_moi_trieu,
+    chi_phi_usd = uoc_tinh_chi_phi(
+        tang=tang,
+        token_vao=tong_token_vao,
+        token_ra=tong_token_ra,
+    )
+    ghi_nhan_luot_goi(
+        tang=tang.tang,
+        model=tang.model,
+        token_vao=tong_token_vao,
+        token_ra=tong_token_ra,
+        chi_phi_usd=chi_phi_usd,
+        do_tre_ms=round(do_tre_ms, 2),
+        thanh_cong=True,
     )
     logger.info(
         f"[Streaming] Hoàn tất luồng phát từ tầng {tang.tang} ({tang.model}): "
@@ -323,6 +339,12 @@ async def goi_mo_hinh(
         LoiDauVaoError: Khi gặp lỗi do dữ liệu đầu vào không hợp lệ (400, prompt quá dài).
         TatCaTangDeuHongError: Khi toàn bộ các tầng trong chuỗi dự phòng đều thất bại.
     """
+    # 1. Kiểm tra ngân sách ngày trước MỖI lời gọi mô hình (phần 2)
+    kiem_tra_ngan_sach()
+
+    # 2. Giám sát tỷ lệ rơi tầng 1 giờ qua (phần 3)
+    tinh_ty_le_roi_tang_1h()
+
     cau_hinh = doc_cau_hinh_models()
     chuoi_du_phong = cau_hinh.chuoi_du_phong
     cai_dat_chung = cau_hinh.cai_dat_chung
@@ -422,16 +444,39 @@ async def goi_mo_hinh(
                     token_vao = getattr(usage, "prompt_tokens", 0) if usage else 0
                     token_ra = getattr(usage, "completion_tokens", 0) if usage else 0
 
-                    chi_phi_usd = tinh_chi_phi_usd(
+                    resp_model = getattr(phan_hoi, "model", None)
+                    model_thuc_te = (
+                        resp_model if isinstance(resp_model, str) and resp_model.strip() else tang.model
+                    )
+                    ghi_chu = None
+                    if tang.ten == "openrouter_auto":
+                        logger.info(
+                            f"[OpenRouter Auto] Nhà cung cấp sử dụng model thực tế: '{model_thuc_te}'. "
+                            f"Chi phí được đánh dấu là ước tính thô."
+                        )
+                        ghi_chu = "uoc_tinh_tho"
+
+                    chi_phi_usd = uoc_tinh_chi_phi(
+                        tang=tang,
                         token_vao=token_vao,
                         token_ra=token_ra,
-                        gia_vao_moi_trieu=tang.gia_vao_usd_moi_trieu,
-                        gia_ra_moi_trieu=tang.gia_ra_usd_moi_trieu,
+                    )
+
+                    # Ghi nhận một dòng vào bảng luot_goi
+                    ghi_nhan_luot_goi(
+                        tang=tang.tang,
+                        model=model_thuc_te,
+                        token_vao=token_vao,
+                        token_ra=token_ra,
+                        chi_phi_usd=chi_phi_usd,
+                        do_tre_ms=round(do_tre_ms, 2),
+                        thanh_cong=True,
+                        ghi_chu=ghi_chu,
                     )
 
                     # Ghi log bắt buộc theo Quy tắc 4 AGENTS.md
                     logger.info(
-                        f"Phục vụ thành công từ tầng {tang.tang} ({tang.model}): "
+                        f"Phục vụ thành công từ tầng {tang.tang} ({model_thuc_te}): "
                         f"{token_vao} token vào, {token_ra} token ra, "
                         f"chi phí ước tính: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"
                     )
@@ -439,7 +484,7 @@ async def goi_mo_hinh(
                     return KetQuaGoi(
                         noi_dung=noi_dung,
                         tang_phuc_vu=tang.tang,
-                        ten_model=tang.model,
+                        ten_model=model_thuc_te,
                         token_vao=token_vao,
                         token_ra=token_ra,
                         do_tre_ms=round(do_tre_ms, 2),
@@ -449,6 +494,9 @@ async def goi_mo_hinh(
                     )
 
             except Exception as e:
+                if tang.tang == 1:
+                    cap_nhat_ly_do_hong_tang_1(f"Lỗi ({getattr(e, 'status_code', 'N/A')}): {e}")
+
                 loai_loi = _phan_loai_loi(e)
 
                 if loai_loi == "dau_vao":
@@ -499,6 +547,15 @@ async def goi_mo_hinh(
                         })
                         break
 
+    # Ghi nhận lượt gọi thất bại vào bảng luot_goi
+    ghi_nhan_luot_goi(
+        tang=0,
+        model="tat_ca_deu_hong",
+        chi_phi_usd=0.0,
+        do_tre_ms=0.0,
+        thanh_cong=False,
+        ghi_chu="tat_ca_tang_deu_hong",
+    )
     # Nếu duyệt qua cả 4 tầng mà không tầng nào phục vụ thành công
     raise TatCaTangDeuHongError(thong_tin_that_bai=danh_sach_tang_da_hong)
 
@@ -520,6 +577,12 @@ async def goi_mo_hinh_theo_dong(
        phát lại từ đầu, vì người dùng sẽ thấy câu trả lời bị viết lại. Thay vào đó kết thúc luồng
        và phát ra một mảnh lỗi kèm phần văn bản đã nhận được. Ghi nhật ký rõ tình huống này.
     """
+    # 1. Kiểm tra ngân sách ngày trước MỖI lời gọi mô hình (phần 2)
+    kiem_tra_ngan_sach()
+
+    # 2. Giám sát tỷ lệ rơi tầng 1 giờ qua (phần 3)
+    tinh_ty_le_roi_tang_1h()
+
     cau_hinh = doc_cau_hinh_models()
     chuoi_du_phong = cau_hinh.chuoi_du_phong
     cai_dat_chung = cau_hinh.cai_dat_chung
@@ -563,6 +626,7 @@ async def goi_mo_hinh_theo_dong(
             cac_doan_van_ban: List[str] = []
             tong_token_vao = 0
             tong_token_ra = 0
+            model_thuc_te = tang.model
 
             try:
                 stream_raw = await litellm.acompletion(
@@ -584,7 +648,11 @@ async def goi_mo_hinh_theo_dong(
                         if delta:
                             doan_text = getattr(delta, "content", "") or ""
 
-                    # Ghi nhận số lượng token nếu có trong chunk
+                    # Ghi nhận model và số lượng token nếu có trong chunk
+                    chunk_model = getattr(chunk, "model", None)
+                    if isinstance(chunk_model, str) and chunk_model.strip():
+                        model_thuc_te = chunk_model
+
                     usage = getattr(chunk, "usage", None)
                     if usage:
                         tong_token_vao = getattr(usage, "prompt_tokens", 0) or tong_token_vao
@@ -600,6 +668,9 @@ async def goi_mo_hinh_theo_dong(
                             await asyncio.sleep(0.02)
 
             except Exception as e:
+                if tang.tang == 1:
+                    cap_nhat_ly_do_hong_tang_1(f"Lỗi ({getattr(e, 'status_code', 'N/A')}): {e}")
+
                 if da_phat_manh_dau:
                     # TÌNH HUỐNG 2: Lỗi GIỮA CHỪNG sau khi đã phát ra vài mảnh:
                     # KHÔNG được rơi tầng rồi phát lại từ đầu, vì người dùng sẽ thấy câu trả lời bị viết lại.
@@ -607,10 +678,20 @@ async def goi_mo_hinh_theo_dong(
                     # Ghi nhật ký rõ tình huống này.
                     van_ban_da_nhan = "".join(cac_doan_van_ban)
                     logger.error(
-                        f"[Streaming] Tầng {tang.tang} ({tang.ten} - {tang.model}) gặp lỗi GIỮA CHỪNG "
+                        f"[Streaming] Tầng {tang.tang} ({tang.ten} - {model_thuc_te}) gặp lỗi GIỮA CHỪNG "
                         f"sau khi đã phát ra {len(cac_doan_van_ban)} mảnh dữ liệu: {e}. "
                         f"Dừng luồng ngay lập tức và phát mảnh lỗi, KHÔNG rơi tầng để tránh lặp nội dung. "
                         f"Văn bản đã nhận được ({len(van_ban_da_nhan)} ký tự)."
+                    )
+                    ghi_nhan_luot_goi(
+                        tang=tang.tang,
+                        model=model_thuc_te,
+                        token_vao=tong_token_vao,
+                        token_ra=len(van_ban_da_nhan.split()),
+                        chi_phi_usd=0.0,
+                        do_tre_ms=round((time.perf_counter() - thoi_gian_bat_dau) * 1000.0, 2),
+                        thanh_cong=False,
+                        ghi_chu=f"loi_giua_chung: {e}",
                     )
                     yield ManhPhatRa.tao_manh_loi(
                         thong_diep_loi=f"Lỗi gián đoạn khi đang truyền dữ liệu từ tầng {tang.tang} ({tang.ten}): {e}",
@@ -682,16 +763,35 @@ async def goi_mo_hinh_theo_dong(
                 if tong_token_ra == 0 and van_ban_hoan_chinh:
                     tong_token_ra = max(1, len(van_ban_hoan_chinh.split()))
 
-                chi_phi_usd = tinh_chi_phi_usd(
+                ghi_chu = None
+                if tang.ten == "openrouter_auto":
+                    logger.info(
+                        f"[OpenRouter Auto] Nhà cung cấp sử dụng model thực tế: '{model_thuc_te}'. "
+                        f"Chi phí được đánh dấu là ước tính thô."
+                    )
+                    ghi_chu = "uoc_tinh_tho"
+
+                chi_phi_usd = uoc_tinh_chi_phi(
+                    tang=tang,
                     token_vao=tong_token_vao,
                     token_ra=tong_token_ra,
-                    gia_vao_moi_trieu=tang.gia_vao_usd_moi_trieu,
-                    gia_ra_moi_trieu=tang.gia_ra_usd_moi_trieu,
+                )
+
+                # Ghi nhận lượt gọi vào cơ sở dữ liệu
+                ghi_nhan_luot_goi(
+                    tang=tang.tang,
+                    model=model_thuc_te,
+                    token_vao=tong_token_vao,
+                    token_ra=tong_token_ra,
+                    chi_phi_usd=chi_phi_usd,
+                    do_tre_ms=round(do_tre_ms, 2),
+                    thanh_cong=True,
+                    ghi_chu=ghi_chu,
                 )
 
                 # Ghi log bắt buộc theo Quy tắc 4 AGENTS.md
                 logger.info(
-                    f"Phục vụ thành công luồng phát từ tầng {tang.tang} ({tang.model}): "
+                    f"Phục vụ thành công luồng phát từ tầng {tang.tang} ({model_thuc_te}): "
                     f"{tong_token_vao} token vào, {tong_token_ra} token ra, "
                     f"chi phí ước tính: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"
                 )
@@ -699,7 +799,7 @@ async def goi_mo_hinh_theo_dong(
                 ket_qua = KetQuaGoi(
                     noi_dung=van_ban_hoan_chinh,
                     tang_phuc_vu=tang.tang,
-                    ten_model=tang.model,
+                    ten_model=model_thuc_te,
                     token_vao=tong_token_vao,
                     token_ra=tong_token_ra,
                     do_tre_ms=round(do_tre_ms, 2),
@@ -710,6 +810,15 @@ async def goi_mo_hinh_theo_dong(
                 yield ManhPhatRa.tao_manh_ket_thuc(ket_qua)
                 return
 
+    # Ghi nhận lượt gọi thất bại vào bảng luot_goi
+    ghi_nhan_luot_goi(
+        tang=0,
+        model="tat_ca_deu_hong",
+        chi_phi_usd=0.0,
+        do_tre_ms=0.0,
+        thanh_cong=False,
+        ghi_chu="tat_ca_tang_deu_hong",
+    )
     # Nếu tất cả các tầng đều thất bại trước khi phát mảnh đầu
     raise TatCaTangDeuHongError(thong_tin_that_bai=danh_sach_tang_da_hong)
 
@@ -721,4 +830,5 @@ __all__ = [
     "ManhPhatRa",
     "TatCaTangDeuHongError",
     "LoiDauVaoError",
+    "VuotNganSachError",
 ]

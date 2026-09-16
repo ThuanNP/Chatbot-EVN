@@ -10,3 +10,4 @@ tenacity==9.0.0
 python-multipart==0.0.20
 pytest==8.3.4
 pytest-asyncio==0.25.3
+pre-commit==4.6.2

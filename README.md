@@ -4,7 +4,7 @@ Hệ thống AI Chatbot phục vụ nghiệp vụ EVN với kiến trúc dự ph
 
 ## Cấu trúc thư mục
 
-```
+```text
 Chatbot-EVN/
 ├── app/                  # Mã nguồn ứng dụng chính
 │   ├── chat/             # Nghiệp vụ quản lý hội thoại và ngữ cảnh
@@ -27,11 +27,13 @@ Chatbot-EVN/
 ## Khởi chạy nhanh
 
 1. Sao chép tệp biến môi trường mẫu và điền các khoá API:
+
    ```bash
    cp .env.example .env
    ```
 
 2. Khởi chạy với Docker Compose:
+
    ```bash
    docker compose up --build
    ```

@@ -115,6 +115,22 @@ class CaiDatMoiTruong(BaseSettings):
         default=60,
         description="Hạn mức số lượt yêu cầu tối đa mỗi người dùng trong một giờ"
     )
+    HAN_MUC_IP_PHUT: int = Field(
+        default=20,
+        description="Hạn mức số lượt yêu cầu tối đa theo địa chỉ IP trong 1 phút (chặn dồn dập)"
+    )
+    HE_SO_BAC_PRO: int = Field(
+        default=5,
+        description="Hệ số nhân hạn mức mỗi giờ dành cho người dùng bậc pro"
+    )
+    HAN_MUC_CHI_PHI_NGAY_FREE_USD: float = Field(
+        default=1.0,
+        description="Hạn mức chi phí tối đa trong ngày cho bậc free (USD)"
+    )
+    HAN_MUC_CHI_PHI_NGAY_PRO_USD: float = Field(
+        default=5.0,
+        description="Hạn mức chi phí tối đa trong ngày cho bậc pro (USD)"
+    )
     MOI_TRUONG: str = Field(
         default="development",
         description="Môi trường thực thi (development, staging, production)"
@@ -122,6 +138,10 @@ class CaiDatMoiTruong(BaseSettings):
     CORS_ORIGINS: str = Field(
         default="http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:8000",
         description="Danh sách các miền được phép truy cập CORS, phân tách bằng dấu phẩy"
+    )
+    GHI_NOI_DUNG: bool = Field(
+        default=False,
+        description="Cờ cho phép ghi nội dung tin nhắn vào nhật ký (chỉ bật trong dev để gỡ lỗi)"
     )
 
 

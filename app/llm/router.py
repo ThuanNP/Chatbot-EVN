@@ -45,6 +45,7 @@ from litellm.exceptions import (
 )
 
 from app.config import CauHinhTang, doc_cau_hinh_models
+from app.core.nhat_ky import ghi_goi_mo_hinh
 from app.llm.chi_phi import (
     VuotNganSachError,
     cap_nhat_ly_do_hong_tang_1,
@@ -297,10 +298,10 @@ async def _tao_luong_phat(
         do_tre_ms=round(do_tre_ms, 2),
         thanh_cong=True,
     )
-    logger.info(
+    logger.debug(
         f"[Streaming] Hoàn tất luồng phát từ tầng {tang.tang} ({tang.model}): "
         f"token_vao={tong_token_vao}, token_ra={tong_token_ra}, "
-        f"chi phí ước tính: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"
+        f"chi phí: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"
     )
 
 
@@ -476,8 +477,7 @@ async def goi_mo_hinh(
                         ghi_chu=ghi_chu,
                     )
 
-                    # Ghi log bắt buộc theo Quy tắc 4 AGENTS.md
-                    logger.info(
+                    logger.debug(
                         f"Phục vụ thành công từ tầng {tang.tang} ({model_thuc_te}): "
                         f"token_vao={token_vao}, token_ra={token_ra}, "
                         f"chi phí ước tính: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"
@@ -794,8 +794,7 @@ async def goi_mo_hinh_theo_dong(
                     ghi_chu=ghi_chu,
                 )
 
-                # Ghi log bắt buộc theo Quy tắc 4 AGENTS.md
-                logger.info(
+                logger.debug(
                     f"Phục vụ thành công luồng phát từ tầng {tang.tang} ({model_thuc_te}): "
                     f"token_vao={tong_token_vao}, token_ra={tong_token_ra}, "
                     f"chi phí ước tính: ${chi_phi_usd:.8f}, độ trễ: {do_tre_ms:.2f}ms"

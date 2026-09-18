@@ -35,6 +35,26 @@ Gemini → OpenRouter/auto → Claude → OpenAI.
     dễ trùng với alias/cmdlet của PowerShell như `curl`, `where`, v.v., bắt buộc
     phải thêm phần mở rộng `.exe` (ví dụ: `curl.exe`, `where.exe`) để chạy đúng
     tệp thực thi nhị phân thay vì alias nội bộ.
+12. Tuân thủ nghiêm ngặt chuẩn Clean Code: thiết kế đơn nhiệm (Single
+    Responsibility), giữ hàm ngắn gọn, không lặp mã (DRY), loại bỏ mã chết,
+    áp dụng fail-fast/early return, phân tách rõ tầng trách nhiệm (định tuyến,
+    nghiệp vụ, dữ liệu). Quy tắc chi tiết tại `.agents/rules/clean_code.md`.
+13. Tuân thủ quy tắc đặt tên (Naming Rule) trong toàn bộ dự án:
+    - Tuyệt đối KHÔNG dùng tiếng Việt có dấu ở bất kỳ đâu trong tên tệp, tên
+      thư mục, biến, hàm, lớp hay cấu hình (ví dụ: cấm đặt `gỡ-lỗi.md`, phải đặt
+      `debug.md` hoặc `go-loi.md`). Tên tệp và thư mục chỉ dùng ASCII chuẩn.
+    - Tên tệp/thư mục: `kebab-case` cho tài liệu/web, `snake_case` cho mã nguồn.
+    - Tên biến, hàm: `snake_case` bằng tiếng Việt không dấu hoặc tiếng Anh nhất
+      quán, phản ánh rõ mục đích sử dụng.
+    - Tên lớp (Class): `PascalCase`. Hằng số: `UPPER_SNAKE_CASE`.
+    - Quy tắc chi tiết tại `.agents/rules/naming.md`.
+14. Bảo mật tài liệu và thiết kế nội bộ: Mọi tài liệu, bản vẽ, thiết kế nội bộ
+    của EVN hoặc EVNHCMC (tài liệu chưa được công bố công khai) bắt buộc phải
+    chuyển vào thư mục `secrets/` và khai báo trong `.gitignore`. Tuyệt đối
+    không commit tài liệu nội bộ vào kho mã nguồn (git). Các tài sản số đã
+    công bố công khai chính thức (như logo EVN, logo EVNHCMC trên trang chủ
+    `evnhcmc.vn` hoặc `https://evn.com.vn`) được phép lưu trữ công khai trong
+    `web/assets/`.
 
 ## Phạm vi làm việc
 

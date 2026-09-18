@@ -1,15 +1,12 @@
 # EVNHCMC — Chuẩn thiết kế nhận diện thương hiệu số
 
 Tài liệu chuẩn thiết kế (design system & brand guidelines) cho các sản phẩm số
-thuộc **Tổng công ty Điện lực TP.HCM (EVNHCMC)**, đối chiếu trực tiếp từ thiết kế
-giao diện **[2025] ALL IN ONE APP** (Figma node `36:137`) và bản mẫu giao diện
-`evnhcmc-template.png`, áp dụng thống nhất cho toàn bộ hệ thống và dự án Chatbot-EVN.
+thuộc **Tổng công ty Điện lực TP.HCM (EVNHCMC)**, áp dụng thống nhất cho toàn bộ hệ thống EVN.
 
 | Mục | Giá trị |
 | --- | --- |
 | Phiên bản | 2.0 (Official Standard) |
 | Ngày ban hành | 2026-09-18 |
-| Nguồn thiết kế | Figma `[2025] ALL IN ONE APP` (node `36:137`), `evnhcmc-template.png` |
 | Phạm vi | Giao diện web/app, ứng dụng văn phòng số và trợ lý ảo EVNHCMC |
 | Trạng thái | Đã phê duyệt áp dụng |
 
@@ -70,10 +67,7 @@ Logo EVNHCMC là thể thống nhất gồm hai phần:
 
 ---
 
-## 3. Hệ màu chuẩn (Color System)
-
-Bảng màu được trích xuất và chuẩn hóa từ Figma `[2025] ALL IN ONE APP` (`❖ Colors`)
-và bảng phối màu thực tế của EVNHCMC Dashboard (`node 36:137`).
+## 3. Hệ thống màu sắc nhận diện (Color System)
 
 ### 3.1. Dải màu xanh chủ đạo (Primary Blue Ramp)
 
@@ -129,9 +123,8 @@ Màu xanh biểu trưng cho dòng điện, sự tin cậy công nghệ và dịc
 
 ## 4. Typography chuẩn
 
-Theo thiết kế Figma `[2025] ALL IN ONE APP` (`❖ Typography`), bộ chữ chính được chỉ định
-là **Lexend**, họ font chữ hiện đại được Google thiết kế nhằm tối ưu hóa độ đọc
-(reading proficiency) và khả năng quét nhanh thông tin.
+Theo thiết kế, bộ chữ chính được chỉ định là **Lexend**, họ font chữ hiện đại được Google thiết kế
+nhằm tối ưu hóa độ đọc (reading proficiency) và khả năng quét nhanh thông tin.
 
 ### 4.1. Họ font chỉ định
 
@@ -182,8 +175,8 @@ là **Lexend**, họ font chữ hiện đại được Google thiết kế nhằ
 
 ### 5.2. Bo góc (Border Radius)
 
-Trực quan từ bản mẫu Figma và `evnhcmc-template.png` thể hiện phong cách hiện đại với
-bo góc mềm mại nhưng rõ ràng, phân tầng chức năng:
+Giao diện chuẩn EVNHCMC thể hiện phong cách hiện đại với bo góc mềm mại
+nhưng rõ ràng, phân tầng chức năng:
 
 | Token | Giá trị | Ứng dụng |
 | --- | --- | --- |
@@ -206,8 +199,6 @@ bo góc mềm mại nhưng rõ ràng, phân tầng chức năng:
 ---
 
 ## 6. Cấu trúc bố cục hệ thống (Dashboard & App Shell)
-
-Đối chiếu cấu trúc chuẩn từ Figma node `36:137` và `evnhcmc-template.png`:
 
 ```text
 +-------------------------------------------------------------------------------+
@@ -315,7 +306,7 @@ Bộ token CSS hoàn chỉnh dưới đây được áp dụng vào giao diện 
 
 ```css
 :root {
-  /* 1. EVNHCMC Brand & Figma Color Ramp */
+  /* 1. EVNHCMC Brand Color Ramp */
   --evn-blue-dark-3: #0C2657;
   --evn-blue-dark-2: #083C90;
   --evn-blue-dark-1: #1254B7;
@@ -395,8 +386,6 @@ Bộ token CSS hoàn chỉnh dưới đây được áp dụng vào giao diện 
 
 ## 10. Tài liệu tham khảo
 
-- Hồ sơ thiết kế Figma EVNHCMC: `[2025] ALL IN ONE APP` (Node ID: `36:137`).
-- Bản mẫu giao diện thực tế: `evnhcmc-template.png` và `evnhcmc-template.pdf`.
 - Cổng thông tin Tổng công ty Điện lực TP.HCM: <https://www.evnhcmc.vn>.
 - Quy chuẩn nhận diện thương hiệu Tập đoàn Điện lực Việt Nam (EVN).
 - Tiêu chuẩn khả năng tiếp cận nội dung web W3C WCAG 2.1 Level AA.

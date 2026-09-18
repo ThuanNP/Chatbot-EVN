@@ -5,3 +5,6 @@ __pycache__/
 .pytest_cache/
 *.db
 .DS_Store
+
+# Thư mục chứa tài liệu, thiết kế nội bộ EVN / EVNHCMC chưa công bố công khai
+secrets/

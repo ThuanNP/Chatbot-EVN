@@ -219,7 +219,14 @@ def dung_ngu_canh(
     logger.info(
         f"[Ngữ cảnh] Dựng ngữ cảnh: token_vao={tong_token_uoc_tinh}, "
         f"giữ lại {len(cac_cap_duoc_chon)}/{len(cac_cap_lich_su)} cặp hội thoại, "
-        f"giới hạn token={gioi_han_token}"
+        f"giới hạn token={gioi_han_token}",
+        extra={
+            "chang": "dung_ngu_canh",
+            "token_vao": tong_token_uoc_tinh,
+            "so_cap_giu_lai": len(cac_cap_duoc_chon),
+            "tong_so_cap": len(cac_cap_lich_su),
+            "do_dai_tin_nhan": len(noi_dung_user_hien_tai) if noi_dung_user_hien_tai else 0,
+        },
     )
 
     return ket_qua

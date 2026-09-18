@@ -1,16 +1,18 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="description" content="Hệ thống AI Chatbot phục vụ nghiệp vụ EVN dành cho cán bộ, nhân viên EVN - Tổng công ty Điện lực TP.HCM">
+  <meta name="description"
+    content="Hệ thống AI Chatbot phục vụ nghiệp vụ EVN dành cho cán bộ, nhân viên EVN - Tổng công ty Điện lực TP.HCM">
   <title>Chatbot EVN — Trợ lý số Nghiệp vụ Điện lực</title>
   <!-- Biểu tượng thương hiệu EVN chính thức -->
   <link rel="icon" type="image/svg+xml" href="assets/icon/LogoEVN.svg">
   <link rel="apple-touch-icon" href="assets/icon/LogoEVN.svg">
   <style>
     /* ==========================================================================
-       1. THIẾT LẬP DESIGN TOKENS CHUẨN EVNHCMC (Figma [2025] ALL IN ONE APP & DESIGN.md)
+       1. THIẾT LẬP DESIGN TOKENS CHUẨN EVNHCMC
        ========================================================================== */
     :root {
       /* 1.1. Họ font chỉ định (Ưu tiên Lexend, fallback hệ thống hiện đại) */
@@ -18,50 +20,71 @@
       --font-mono: "Source Code Pro", SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 
       /* 1.2. Dải màu xanh chủ đạo EVNHCMC */
-      --evn-blue-dark-3: #0C2657;  /* Xanh thẫm tương phản cao, header/sidebar */
-      --evn-blue-dark-2: #083C90;  /* Trạng thái active/hover trên nền tối */
-      --evn-blue-dark-1: #1254B7;  /* Đường viền và gradient nhấn */
-      --evn-blue-base:   #016BF8;  /* Màu thương hiệu chính: nút, tab, link */
-      --evn-blue-light-1:#0498EC;  /* Electric Cyan: biểu đồ, tiến độ */
-      --evn-blue-light-2:#C3E7FE;  /* Nền badge mềm mại */
-      --evn-blue-light-3:#E1F7FF;  /* Nền thông số telemetry và highlight */
+      --evn-blue-dark-3: #0C2657;
+      /* Xanh thẫm tương phản cao, header/sidebar */
+      --evn-blue-dark-2: #083C90;
+      /* Trạng thái active/hover trên nền tối */
+      --evn-blue-dark-1: #1254B7;
+      /* Đường viền và gradient nhấn */
+      --evn-blue-base: #016BF8;
+      /* Màu thương hiệu chính: nút, tab, link */
+      --evn-blue-light-1: #0498EC;
+      /* Electric Cyan: biểu đồ, tiến độ */
+      --evn-blue-light-2: #C3E7FE;
+      /* Nền badge mềm mại */
+      --evn-blue-light-3: #E1F7FF;
+      /* Nền thông số telemetry và highlight */
 
       /* 1.3. Màu trạng thái nghiệp vụ & an toàn */
-      --evn-green-base:  #00ED64;  /* Thành công, lưới điện ổn định */
-      --evn-green-dark:  #00A35C;  /* Chữ trạng thái xanh trên nền sáng */
-      --evn-green-light: #C0FAE6;  /* Nền badge thành công */
+      --evn-green-base: #00ED64;
+      /* Thành công, lưới điện ổn định */
+      --evn-green-dark: #00A35C;
+      /* Chữ trạng thái xanh trên nền sáng */
+      --evn-green-light: #C0FAE6;
+      /* Nền badge thành công */
 
-      --evn-yellow-base: #FFC010;  /* Cảnh báo, hồ sơ chờ duyệt */
-      --evn-yellow-dark: #944F01;  /* Chữ cảnh báo đạt chuẩn tương phản */
-      --evn-yellow-light:#FEF7D8;  /* Nền badge cảnh báo */
+      --evn-yellow-base: #FFC010;
+      /* Cảnh báo, hồ sơ chờ duyệt */
+      --evn-yellow-dark: #944F01;
+      /* Chữ cảnh báo đạt chuẩn tương phản */
+      --evn-yellow-light: #FEF7D8;
+      /* Nền badge cảnh báo */
 
-      --evn-red-base:    #DB3030;  /* Sự cố mất điện, hủy, dừng stream */
-      --evn-red-dark:    #970606;
-      --evn-red-light:   #FFEAE5;  /* Nền thông báo cảnh báo lỗi */
+      --evn-red-base: #DB3030;
+      /* Sự cố mất điện, hủy, dừng stream */
+      --evn-red-dark: #970606;
+      --evn-red-light: #FFEAE5;
+      /* Nền thông báo cảnh báo lỗi */
 
       --evn-purple-base: #B45AF2;
 
       /* 1.4. Màu trung tính (Neutrals) */
-      --evn-white:       #FFFFFF;
-      --evn-gray-light-3:#F9FBFA;
-      --evn-gray-light-2:#E8EDEB;  /* Viền card và thanh phân cách */
-      --evn-gray-light-1:#C1C7C6;  /* Viền input lúc bình thường */
-      --evn-gray-base:   #889397;  /* Text phụ, timestamp, placeholder */
-      --evn-gray-dark-1: #5C6C75;  /* Text mô tả ngắn, nhãn thứ cấp */
-      --evn-gray-dark-2: #3D4F58;  /* Text chính (Body & Heading) */
-      --evn-bg-canvas:   #F0F4F8;  /* Nền tổng thể làm việc hiện đại */
+      --evn-white: #FFFFFF;
+      --evn-gray-light-3: #F9FBFA;
+      --evn-gray-light-2: #E8EDEB;
+      /* Viền card và thanh phân cách */
+      --evn-gray-light-1: #C1C7C6;
+      /* Viền input lúc bình thường */
+      --evn-gray-base: #889397;
+      /* Text phụ, timestamp, placeholder */
+      --evn-gray-dark-1: #5C6C75;
+      /* Text mô tả ngắn, nhãn thứ cấp */
+      --evn-gray-dark-2: #3D4F58;
+      /* Text chính (Body & Heading) */
+      --evn-bg-canvas: #F0F4F8;
+      /* Nền tổng thể làm việc hiện đại */
 
       /* 1.5. Ánh xạ vai trò giao diện (Semantic Mappings) */
-      --color-primary:        var(--evn-blue-base);
-      --color-primary-hover:  var(--evn-blue-dark-1);
+      --color-primary: var(--evn-blue-base);
+      --color-primary-hover: var(--evn-blue-dark-1);
       --color-primary-active: var(--evn-blue-dark-2);
-      --color-bg-app:         var(--evn-bg-canvas);
-      --color-bg-surface:     var(--evn-white);
-      --color-bg-card:        var(--evn-white);
-      --color-border:         var(--evn-gray-light-2);
-      --color-text-main:      var(--evn-gray-dark-2);
-      --color-text-muted:     var(--evn-gray-dark-1);
-      --color-text-dim:       var(--evn-gray-base);
+      --color-bg-app: var(--evn-bg-canvas);
+      --color-bg-surface: var(--evn-white);
+      --color-bg-card: var(--evn-white);
+      --color-border: var(--evn-gray-light-2);
+      --color-text-main: var(--evn-gray-dark-2);
+      --color-text-muted: var(--evn-gray-dark-1);
+      --color-text-dim: var(--evn-gray-base);
 
       /* 1.6. Thang khoảng cách 4px Grid */
       --space-1: 4px;
@@ -94,13 +117,16 @@
     }
 
     /* Đặt lại chuẩn */
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
 
-    html, body {
+    html,
+    body {
       height: 100%;
       height: 100dvh;
       width: 100%;
@@ -979,8 +1005,15 @@
     }
 
     @keyframes fadeInBubble {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .message-row.user {
@@ -1090,12 +1123,27 @@
       animation: typingBounce 1.2s infinite ease-in-out;
     }
 
-    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    .typing-indicator span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-indicator span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
 
     @keyframes typingBounce {
-      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-      40% { transform: translateY(-5px); opacity: 1; }
+
+      0%,
+      80%,
+      100% {
+        transform: translateY(0);
+        opacity: 0.4;
+      }
+
+      40% {
+        transform: translateY(-5px);
+        opacity: 1;
+      }
     }
 
     /* ==========================================================================
@@ -1108,7 +1156,8 @@
       font-size: 12.5px;
     }
 
-    .message-bubble th, .message-bubble td {
+    .message-bubble th,
+    .message-bubble td {
       border: 1px solid var(--evn-gray-light-2);
       padding: 6px 10px;
       text-align: left;
@@ -1120,7 +1169,8 @@
       font-weight: 600;
     }
 
-    .message-bubble ul, .message-bubble ol {
+    .message-bubble ul,
+    .message-bubble ol {
       margin: 6px 0 6px 20px;
     }
 
@@ -1328,6 +1378,7 @@
         opacity: 0;
         transform: translateY(3px);
       }
+
       to {
         opacity: 1;
         transform: translateY(0);
@@ -1631,12 +1682,35 @@
       flex-shrink: 0;
     }
 
-    .service-tile-icon.blue { background: var(--evn-blue-light-3); color: var(--evn-blue-base); }
-    .service-tile-icon.green { background: var(--evn-green-light); color: var(--evn-green-dark); }
-    .service-tile-icon.yellow { background: var(--evn-yellow-light); color: var(--evn-yellow-dark); }
-    .service-tile-icon.red { background: var(--evn-red-light); color: var(--evn-red-base); }
-    .service-tile-icon.cyan { background: var(--evn-blue-light-2); color: var(--evn-blue-dark-2); }
-    .service-tile-icon.purple { background: #F3E8FF; color: var(--evn-purple-base); }
+    .service-tile-icon.blue {
+      background: var(--evn-blue-light-3);
+      color: var(--evn-blue-base);
+    }
+
+    .service-tile-icon.green {
+      background: var(--evn-green-light);
+      color: var(--evn-green-dark);
+    }
+
+    .service-tile-icon.yellow {
+      background: var(--evn-yellow-light);
+      color: var(--evn-yellow-dark);
+    }
+
+    .service-tile-icon.red {
+      background: var(--evn-red-light);
+      color: var(--evn-red-base);
+    }
+
+    .service-tile-icon.cyan {
+      background: var(--evn-blue-light-2);
+      color: var(--evn-blue-dark-2);
+    }
+
+    .service-tile-icon.purple {
+      background: #F3E8FF;
+      color: var(--evn-purple-base);
+    }
 
     .service-tile-content {
       flex: 1;
@@ -2121,7 +2195,10 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
+
+      *,
+      *::before,
+      *::after {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
@@ -2129,13 +2206,15 @@
     }
   </style>
 </head>
+
 <body>
   <div class="app-shell">
     <!-- TOP HEADER -->
     <header class="top-header">
       <div class="header-left">
         <button id="btn-toggle-menu" class="btn-toggle-menu" title="Mở danh mục điều hướng" aria-label="Mở menu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="12" x2="21" y2="12"></line>
             <line x1="3" y1="6" x2="21" y2="6"></line>
             <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -2157,17 +2236,20 @@
 
       <div class="header-center">
         <div class="search-bar">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          <input type="text" id="global-search" placeholder="Tra cứu quy trình, biểu giá, mã khách hàng PE..." aria-label="Tìm kiếm nghiệp vụ">
+          <input type="text" id="global-search" placeholder="Tra cứu quy trình, biểu giá, mã khách hàng PE..."
+            aria-label="Tìm kiếm nghiệp vụ">
           <kbd>⌘K</kbd>
         </div>
       </div>
 
       <div class="header-right">
-        <div class="system-status-indicator" id="system-status-badge" title="Trạng thái kết nối: Sẵn sàng | Chuỗi 4 tầng: Gemini → OpenRouter → Claude → OpenAI">
+        <div class="system-status-indicator" id="system-status-badge"
+          title="Trạng thái kết nối: Sẵn sàng | Chuỗi 4 tầng: Gemini → OpenRouter → Claude → OpenAI">
           <div class="status-pulse-dot" id="system-status-dot"></div>
           <span id="system-status-text">Kết nối: Sẵn sàng</span>
         </div>
@@ -2191,7 +2273,8 @@
       <aside id="sidebar" class="sidebar">
         <div class="sidebar-inner">
           <button id="btn-new-chat" class="btn-new-chat" type="button">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
@@ -2204,7 +2287,8 @@
             <ul class="nav-list">
               <li>
                 <button id="nav-btn-dashboard" class="nav-item-btn active" type="button">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="3" width="7" height="7"></rect>
                     <rect x="14" y="3" width="7" height="7"></rect>
                     <rect x="14" y="14" width="7" height="7"></rect>
@@ -2215,15 +2299,18 @@
               </li>
               <li>
                 <button id="nav-btn-chat" class="nav-item-btn" type="button">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
                   <span>Trò chuyện Trợ lý ảo</span>
                 </button>
               </li>
               <li>
-                <button class="nav-item-btn" type="button" onclick="sendSamplePrompt('Quy trình kiểm tra và tiếp nhận hồ sơ cấp điện sinh hoạt mới')">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <button class="nav-item-btn" type="button"
+                  onclick="sendSamplePrompt('Quy trình kiểm tra và tiếp nhận hồ sơ cấp điện sinh hoạt mới')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
                     <circle cx="9" cy="7" r="4"></circle>
                     <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
@@ -2233,8 +2320,10 @@
                 </button>
               </li>
               <li>
-                <button class="nav-item-btn" type="button" onclick="sendSamplePrompt('Quy trình xử lý sự cố mất điện và khôi phục lưới điện phân phối')">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <button class="nav-item-btn" type="button"
+                  onclick="sendSamplePrompt('Quy trình xử lý sự cố mất điện và khôi phục lưới điện phân phối')">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
                   </svg>
                   <span>Kỹ thuật & Vận hành</span>
@@ -2268,7 +2357,8 @@
               <span class="fallback-step-pill" title="Tầng 4">OpenAI</span>
             </div>
             <div class="rule-9-notice">
-              🔒 <strong>Quy định nội bộ EVN:</strong> Chỉ phục vụ tra cứu thông tin, không thực hiện giao dịch, không thay đổi dữ liệu khách hàng.
+              🔒 <strong>Quy định nội bộ EVN:</strong> Chỉ phục vụ tra cứu thông tin, không thực hiện giao dịch, không
+              thay đổi dữ liệu khách hàng.
             </div>
             <div class="hotline-row">
               <span>Tổng đài CSKH:</span>
@@ -2312,62 +2402,67 @@
 
             <!-- Hàng 4 Thẻ KPI Chỉ số Điều hành -->
             <section class="kpi-row" aria-label="Thống kê chỉ số điều hành">
-          <div class="kpi-card">
-            <div class="kpi-info">
-              <span class="kpi-label">Lượt tra cứu hôm nay</span>
-              <span class="kpi-value" id="kpi-count">18,420</span>
-              <span class="kpi-sub up">↑ +12.4% so với hôm qua</span>
-            </div>
-            <div class="kpi-badge-icon blue">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
-            </div>
-          </div>
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <span class="kpi-label">Lượt tra cứu hôm nay</span>
+                  <span class="kpi-value" id="kpi-count">18,420</span>
+                  <span class="kpi-sub up">↑ +12.4% so với hôm qua</span>
+                </div>
+                <div class="kpi-badge-icon blue">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                </div>
+              </div>
 
-          <div class="kpi-card">
-            <div class="kpi-info">
-              <span class="kpi-label">Tỷ lệ giải đáp tự động</span>
-              <span class="kpi-value">98.5%</span>
-              <span class="kpi-sub" style="color: var(--evn-green-dark);">Vận hành xuất sắc</span>
-            </div>
-            <div class="kpi-badge-icon green">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-              </svg>
-            </div>
-          </div>
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <span class="kpi-label">Tỷ lệ giải đáp tự động</span>
+                  <span class="kpi-value">98.5%</span>
+                  <span class="kpi-sub" style="color: var(--evn-green-dark);">Vận hành xuất sắc</span>
+                </div>
+                <div class="kpi-badge-icon green">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+              </div>
 
-          <div class="kpi-card">
-            <div class="kpi-info">
-              <span class="kpi-label">Yêu cầu cần xác minh</span>
-              <span class="kpi-value">24</span>
-              <span class="kpi-sub">Cần thẩm tra hiện trường</span>
-            </div>
-            <div class="kpi-badge-icon yellow">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                <line x1="12" y1="9" x2="12" y2="13"></line>
-                <line x1="12" y1="17" x2="12.01" y2="17"></line>
-              </svg>
-            </div>
-          </div>
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <span class="kpi-label">Yêu cầu cần xác minh</span>
+                  <span class="kpi-value">24</span>
+                  <span class="kpi-sub">Cần thẩm tra hiện trường</span>
+                </div>
+                <div class="kpi-badge-icon yellow">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                    </path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                  </svg>
+                </div>
+              </div>
 
-          <div class="kpi-card">
-            <div class="kpi-info">
-              <span class="kpi-label">Tầng mô hình / Độ trễ</span>
-              <span class="kpi-value" id="kpi-tier-model" style="font-size: 16px;">Tier 1 / SSE</span>
-              <span class="kpi-sub" id="kpi-latency-val">Độ trễ trung bình ~340ms</span>
-            </div>
-            <div class="kpi-badge-icon cyan">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-            </div>
-          </div>
-        </section>
+              <div class="kpi-card">
+                <div class="kpi-info">
+                  <span class="kpi-label">Tầng mô hình / Độ trễ</span>
+                  <span class="kpi-value" id="kpi-tier-model" style="font-size: 16px;">Tier 1 / SSE</span>
+                  <span class="kpi-sub" id="kpi-latency-val">Độ trễ trung bình ~340ms</span>
+                </div>
+                <div class="kpi-badge-icon cyan">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                </div>
+              </div>
+            </section>
 
             <!-- Hero Card Chào mừng & Hỏi nhanh Trợ lý ảo EVN -->
             <div class="dash-hero-card">
@@ -2376,21 +2471,26 @@
                   <span class="dash-hero-badge">TRỢ LÝ TRÍ TUỆ NHÂN TẠO CHUYÊN BIỆT</span>
                   <h1 class="dash-hero-title">Trợ lý Nghiệp vụ Điện lực TP.HCM</h1>
                   <p class="dash-hero-desc">
-                    Hỗ trợ cán bộ, nhân viên EVN tra cứu thông tin khách hàng, kiểm tra biểu giá điện bậc thang, hướng dẫn quy trình cấp điện mới và xử lý sự cố lưới điện theo thời gian thực.
+                    Hỗ trợ cán bộ, nhân viên EVN tra cứu thông tin khách hàng, kiểm tra biểu giá điện bậc thang, hướng
+                    dẫn quy trình cấp điện mới và xử lý sự cố lưới điện theo thời gian thực.
                   </p>
                 </div>
 
                 <!-- Khung Hỏi Nhanh Ngay Tại Dashboard -->
                 <div class="dash-quick-ask-box">
                   <div class="dash-quick-input-wrap">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dash-search-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      class="dash-search-icon">
                       <circle cx="11" cy="11" r="8"></circle>
                       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <input type="text" id="dash-quick-input" placeholder="Đặt câu hỏi nghiệp vụ hoặc nhập mã khách hàng PE..." aria-label="Hỏi nhanh trợ lý ảo">
+                    <input type="text" id="dash-quick-input"
+                      placeholder="Đặt câu hỏi nghiệp vụ hoặc nhập mã khách hàng PE..."
+                      aria-label="Hỏi nhanh trợ lý ảo">
                     <button type="button" class="dash-btn-ask" onclick="handleDashboardAsk()">
                       <span>Hỏi Trợ lý AI</span>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.5">
                         <line x1="5" y1="12" x2="19" y2="12"></line>
                         <polyline points="12 5 19 12 12 19"></polyline>
                       </svg>
@@ -2398,7 +2498,8 @@
                   </div>
                   <div class="dash-hero-actions">
                     <button type="button" class="dash-btn-open-chat" onclick="switchView('chat')">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                       </svg>
                       <span>Mở giao diện Chat toàn màn hình</span>
@@ -2413,7 +2514,8 @@
             <div class="dash-section">
               <div class="dash-section-header">
                 <div class="dash-section-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--evn-blue-base);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="color: var(--evn-blue-base);">
                     <rect x="3" y="3" width="7" height="7"></rect>
                     <rect x="14" y="3" width="7" height="7"></rect>
                     <rect x="14" y="14" width="7" height="7"></rect>
@@ -2426,7 +2528,8 @@
 
               <div class="dash-service-grid">
                 <!-- 1. Hóa đơn PE -->
-                <div class="service-tile" onclick="sendSamplePrompt('Hướng dẫn tra cứu hóa đơn tiền điện và chỉ số công tơ điện tử theo mã khách hàng PE')">
+                <div class="service-tile"
+                  onclick="sendSamplePrompt('Hướng dẫn tra cứu hóa đơn tiền điện và chỉ số công tơ điện tử theo mã khách hàng PE')">
                   <div class="service-tile-icon blue">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -2443,7 +2546,8 @@
                 </div>
 
                 <!-- 2. Cấp điện mới -->
-                <div class="service-tile" onclick="sendSamplePrompt('Quy trình tiếp nhận và xử lý hồ sơ đăng ký cấp điện sinh hoạt mới cho khách hàng cá nhân')">
+                <div class="service-tile"
+                  onclick="sendSamplePrompt('Quy trình tiếp nhận và xử lý hồ sơ đăng ký cấp điện sinh hoạt mới cho khách hàng cá nhân')">
                   <div class="service-tile-icon green">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -2460,7 +2564,8 @@
                 </div>
 
                 <!-- 3. Biểu giá 6 bậc -->
-                <div class="service-tile" onclick="sendSamplePrompt('Bảng biểu giá bán lẻ điện sinh hoạt 6 bậc hiện hành và cách tính tiền điện chi tiết')">
+                <div class="service-tile"
+                  onclick="sendSamplePrompt('Bảng biểu giá bán lẻ điện sinh hoạt 6 bậc hiện hành và cách tính tiền điện chi tiết')">
                   <div class="service-tile-icon yellow">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <line x1="12" y1="1" x2="12" y2="23"></line>
@@ -2475,7 +2580,8 @@
                 </div>
 
                 <!-- 4. Sự cố mất điện -->
-                <div class="service-tile" onclick="sendSamplePrompt('Quy trình tiếp nhận, cô lập sự cố và điều động khắc phục mất điện khẩn cấp')">
+                <div class="service-tile"
+                  onclick="sendSamplePrompt('Quy trình tiếp nhận, cô lập sự cố và điều động khắc phục mất điện khẩn cấp')">
                   <div class="service-tile-icon red">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
@@ -2489,7 +2595,8 @@
                 </div>
 
                 <!-- 5. KD & DVKH -->
-                <div class="service-tile" onclick="sendSamplePrompt('Quy trình kiểm tra và tiếp nhận hồ sơ cấp điện sinh hoạt mới')">
+                <div class="service-tile"
+                  onclick="sendSamplePrompt('Quy trình kiểm tra và tiếp nhận hồ sơ cấp điện sinh hoạt mới')">
                   <div class="service-tile-icon cyan">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -2506,16 +2613,20 @@
                 </div>
 
                 <!-- 6. Kỹ thuật & Đo xa -->
-                <div class="service-tile" onclick="sendSamplePrompt('Quy trình kiểm tra và xử lý bất thường dữ liệu đo xa công tơ điện tử')">
+                <div class="service-tile"
+                  onclick="sendSamplePrompt('Quy trình kiểm tra và xử lý bất thường dữ liệu đo xa công tơ điện tử')">
                   <div class="service-tile-icon purple">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="3"></circle>
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                      <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                      </path>
                     </svg>
                   </div>
                   <div class="service-tile-content">
                     <h3 class="service-tile-title">Kỹ thuật, đo xa & GIS</h3>
-                    <p class="service-tile-desc">Tra cứu số liệu công tơ điện tử, vận hành trạm và an toàn lưới điện.</p>
+                    <p class="service-tile-desc">Tra cứu số liệu công tơ điện tử, vận hành trạm và an toàn lưới điện.
+                    </p>
                   </div>
                   <span class="service-tile-arrow">→</span>
                 </div>
@@ -2605,7 +2716,9 @@
                   </div>
 
                   <div class="dash-rule9-box">
-                    🔒 <strong>Quy định bảo mật EVN (Quy tắc số 9):</strong> Hệ thống phục vụ nội bộ EVN chỉ dùng để tra cứu quy trình, biểu giá và hỗ trợ nghiệp vụ; tuyệt đối không xử lý giao dịch hoặc thay đổi dữ liệu khách hàng.
+                    🔒 <strong>Quy định bảo mật EVN (Quy tắc số 9):</strong> Hệ thống phục vụ nội bộ EVN chỉ dùng để tra
+                    cứu quy trình, biểu giá và hỗ trợ nghiệp vụ; tuyệt đối không xử lý giao dịch hoặc thay đổi dữ liệu
+                    khách hàng.
                   </div>
                 </div>
               </div>
@@ -2617,151 +2730,171 @@
              GIAO DIỆN 2: GIAO DIỆN CHAT RIÊNG BIỆT
              ================================================================ -->
         <div id="view-chat" class="app-view" role="region" aria-label="Giao diện Chat Trợ lý ảo EVN">
-        <!-- KHUNG TRỢ LÝ ẢO AI EVNHCMC -->
-        <div class="assistant-card">
-          <!-- Chat Header -->
-          <div class="chat-header">
-            <div class="chat-header-title-wrap">
-              <button type="button" class="btn-back-dashboard" onclick="switchView('dashboard')" title="Quay lại Dashboard Trang chủ">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-                <span>Dashboard</span>
-              </button>
-              <div class="chat-header-divider" aria-hidden="true"></div>
-              <div class="chat-bot-avatar">
-                <img src="assets/icon/LogoEVN.svg" alt="Logo EVN" width="24" height="24">
-              </div>
-              <div>
-                <div class="chat-header-title" id="chat-session-title">Trợ lý số Nghiệp vụ EVN</div>
-              </div>
-              <div class="stream-status-pill">
-                <div class="stream-status-dot"></div>
-                <span>SSE Trực tuyến</span>
-              </div>
-            </div>
-
-            <div class="chat-header-actions">
-              <button class="action-btn" id="btn-refresh-chat" title="Bắt đầu phiên tra cứu mới">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="1 4 1 10 7 10"></polyline>
-                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                </svg>
-                <span>Làm mới</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Banner quy tắc bất biến số 9 -->
-          <div class="policy-banner">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--evn-blue-base);">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="16" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12.01" y2="8"></line>
-            </svg>
-            <span><strong>Quy chuẩn tác nghiệp:</strong> Hệ thống AI phục vụ nội bộ EVN chỉ dùng để tra cứu quy trình, biểu giá và hướng dẫn chuyên môn; không thực hiện giao dịch hay thay đổi thông tin khách hàng.</span>
-          </div>
-
-          <!-- Vùng cuộn tin nhắn -->
-          <div class="chat-scroll-area" id="chat-container" role="log" aria-live="polite">
-            <!-- Hộp chào mừng (Welcome) -->
-            <div id="welcome-box" class="welcome-box">
-              <div class="welcome-logo-badge">
-                <img src="assets/icon/LogoEVN.svg" alt="Logo EVN" width="48" height="48">
-              </div>
-              <h1 class="welcome-title">Trợ lý Trí tuệ Nhân tạo Nghiệp vụ EVN</h1>
-              <p class="welcome-desc">
-                Hỗ trợ cán bộ, nhân viên EVN tra cứu thông tin khách hàng, kiểm tra biểu giá điện bậc thang, hướng dẫn quy trình cấp điện mới và xử lý sự cố lưới điện theo thời gian thực.
-              </p>
-
-              <!-- 4 Gợi ý tác vụ 1-chạm -->
-              <div class="quick-chips-grid">
-                <button class="quick-chip-btn" type="button" onclick="sendSamplePrompt('Hướng dẫn tra cứu hóa đơn tiền điện và chỉ số công tơ điện tử theo mã khách hàng PE')">
-                  <div class="quick-chip-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                      <polyline points="14 2 14 8 20 8"></polyline>
-                      <line x1="16" y1="13" x2="8" y2="13"></line>
-                      <line x1="16" y1="17" x2="8" y2="17"></line>
-                    </svg>
-                  </div>
-                  <div class="quick-chip-text">
-                    <span class="quick-chip-title">Tra cứu hóa đơn & chỉ số PE</span>
-                    <span class="quick-chip-desc">Mẫu tra cứu hóa đơn, điện năng tiêu thụ và trạng thái thanh toán</span>
-                  </div>
-                </button>
-
-                <button class="quick-chip-btn" type="button" onclick="sendSamplePrompt('Quy trình tiếp nhận và xử lý hồ sơ đăng ký cấp điện sinh hoạt mới cho khách hàng cá nhân')">
-                  <div class="quick-chip-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="8.5" cy="7" r="4"></circle>
-                      <line x1="20" y1="8" x2="20" y2="14"></line>
-                      <line x1="23" y1="11" x2="17" y2="11"></line>
-                    </svg>
-                  </div>
-                  <div class="quick-chip-text">
-                    <span class="quick-chip-title">Quy trình cấp điện mới</span>
-                    <span class="quick-chip-desc">Hồ sơ, thủ tục thẩm định và thời gian giải quyết cấp điện</span>
-                  </div>
-                </button>
-
-                <button class="quick-chip-btn" type="button" onclick="sendSamplePrompt('Bảng biểu giá bán lẻ điện sinh hoạt 6 bậc hiện hành và cách tính tiền điện chi tiết')">
-                  <div class="quick-chip-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="12" y1="1" x2="12" y2="23"></line>
-                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                    </svg>
-                  </div>
-                  <div class="quick-chip-text">
-                    <span class="quick-chip-title">Biểu giá điện 6 bậc sinh hoạt</span>
-                    <span class="quick-chip-desc">Mức giá từng bậc thang, thuế VAT 8% và công thức tính toán</span>
-                  </div>
-                </button>
-
-                <button class="quick-chip-btn" type="button" onclick="sendSamplePrompt('Quy trình tiếp nhận, cô lập sự cố và điều động khắc phục mất điện khẩn cấp')">
-                  <div class="quick-chip-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                      <line x1="12" y1="9" x2="12" y2="13"></line>
-                      <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                    </svg>
-                  </div>
-                  <div class="quick-chip-text">
-                    <span class="quick-chip-title">Xử lý sự cố lưới điện</span>
-                    <span class="quick-chip-desc">Các bước an toàn, cô lập vùng sự cố và khôi phục cung cấp điện</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Vùng nhập liệu Chat chân trang -->
-          <div class="chat-input-wrapper">
-            <div class="input-box-container">
-              <textarea id="chat-input" class="chat-textarea" rows="1" placeholder="Nhập câu hỏi nghiệp vụ ngành điện hoặc yêu cầu tra cứu..." aria-label="Nội dung câu hỏi"></textarea>
-              <div class="input-actions-group">
-                <button id="btn-stop" class="btn-stop" type="button" title="Dừng luồng phản hồi">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <rect x="6" y="6" width="12" height="12"></rect>
+          <!-- KHUNG TRỢ LÝ ẢO AI EVNHCMC -->
+          <div class="assistant-card">
+            <!-- Chat Header -->
+            <div class="chat-header">
+              <div class="chat-header-title-wrap">
+                <button type="button" class="btn-back-dashboard" onclick="switchView('dashboard')"
+                  title="Quay lại Dashboard Trang chủ">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="15 18 9 12 15 6"></polyline>
                   </svg>
-                  <span>Dừng</span>
+                  <span>Dashboard</span>
                 </button>
-                <button id="btn-send" class="btn-send" type="button" title="Gửi câu hỏi (Enter)">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                <div class="chat-header-divider" aria-hidden="true"></div>
+                <div class="chat-bot-avatar">
+                  <img src="assets/icon/LogoEVN.svg" alt="Logo EVN" width="24" height="24">
+                </div>
+                <div>
+                  <div class="chat-header-title" id="chat-session-title">Trợ lý số Nghiệp vụ EVN</div>
+                </div>
+                <div class="stream-status-pill">
+                  <div class="stream-status-dot"></div>
+                  <span>SSE Trực tuyến</span>
+                </div>
+              </div>
+
+              <div class="chat-header-actions">
+                <button class="action-btn" id="btn-refresh-chat" title="Bắt đầu phiên tra cứu mới">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                   </svg>
+                  <span>Làm mới</span>
                 </button>
               </div>
             </div>
 
-            <div class="input-footer-note">
-              <span>Phím tắt: <strong>Enter</strong> để gửi, <strong>Shift + Enter</strong> để xuống dòng</span>
-              <span id="cost-stat-display">Ngân sách LLM: <strong class="cost-stat-inline">$0.00 / $10.00</strong></span>
+            <!-- Banner quy tắc bất biến số 9 -->
+            <div class="policy-banner">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                style="color: var(--evn-blue-base);">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <span><strong>Quy chuẩn tác nghiệp:</strong> Hệ thống AI phục vụ nội bộ EVN chỉ dùng để tra cứu quy trình,
+                biểu giá và hướng dẫn chuyên môn; không thực hiện giao dịch hay thay đổi thông tin khách hàng.</span>
+            </div>
+
+            <!-- Vùng cuộn tin nhắn -->
+            <div class="chat-scroll-area" id="chat-container" role="log" aria-live="polite">
+              <!-- Hộp chào mừng (Welcome) -->
+              <div id="welcome-box" class="welcome-box">
+                <div class="welcome-logo-badge">
+                  <img src="assets/icon/LogoEVN.svg" alt="Logo EVN" width="48" height="48">
+                </div>
+                <h1 class="welcome-title">Trợ lý Trí tuệ Nhân tạo Nghiệp vụ EVN</h1>
+                <p class="welcome-desc">
+                  Hỗ trợ cán bộ, nhân viên EVN tra cứu thông tin khách hàng, kiểm tra biểu giá điện bậc thang, hướng dẫn
+                  quy trình cấp điện mới và xử lý sự cố lưới điện theo thời gian thực.
+                </p>
+
+                <!-- 4 Gợi ý tác vụ 1-chạm -->
+                <div class="quick-chips-grid">
+                  <button class="quick-chip-btn" type="button"
+                    onclick="sendSamplePrompt('Hướng dẫn tra cứu hóa đơn tiền điện và chỉ số công tơ điện tử theo mã khách hàng PE')">
+                    <div class="quick-chip-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                    </div>
+                    <div class="quick-chip-text">
+                      <span class="quick-chip-title">Tra cứu hóa đơn & chỉ số PE</span>
+                      <span class="quick-chip-desc">Mẫu tra cứu hóa đơn, điện năng tiêu thụ và trạng thái thanh
+                        toán</span>
+                    </div>
+                  </button>
+
+                  <button class="quick-chip-btn" type="button"
+                    onclick="sendSamplePrompt('Quy trình tiếp nhận và xử lý hồ sơ đăng ký cấp điện sinh hoạt mới cho khách hàng cá nhân')">
+                    <div class="quick-chip-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="8.5" cy="7" r="4"></circle>
+                        <line x1="20" y1="8" x2="20" y2="14"></line>
+                        <line x1="23" y1="11" x2="17" y2="11"></line>
+                      </svg>
+                    </div>
+                    <div class="quick-chip-text">
+                      <span class="quick-chip-title">Quy trình cấp điện mới</span>
+                      <span class="quick-chip-desc">Hồ sơ, thủ tục thẩm định và thời gian giải quyết cấp điện</span>
+                    </div>
+                  </button>
+
+                  <button class="quick-chip-btn" type="button"
+                    onclick="sendSamplePrompt('Bảng biểu giá bán lẻ điện sinh hoạt 6 bậc hiện hành và cách tính tiền điện chi tiết')">
+                    <div class="quick-chip-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                      </svg>
+                    </div>
+                    <div class="quick-chip-text">
+                      <span class="quick-chip-title">Biểu giá điện 6 bậc sinh hoạt</span>
+                      <span class="quick-chip-desc">Mức giá từng bậc thang, thuế VAT 8% và công thức tính toán</span>
+                    </div>
+                  </button>
+
+                  <button class="quick-chip-btn" type="button"
+                    onclick="sendSamplePrompt('Quy trình tiếp nhận, cô lập sự cố và điều động khắc phục mất điện khẩn cấp')">
+                    <div class="quick-chip-icon">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path
+                          d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                        </path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                      </svg>
+                    </div>
+                    <div class="quick-chip-text">
+                      <span class="quick-chip-title">Xử lý sự cố lưới điện</span>
+                      <span class="quick-chip-desc">Các bước an toàn, cô lập vùng sự cố và khôi phục cung cấp
+                        điện</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Vùng nhập liệu Chat chân trang -->
+            <div class="chat-input-wrapper">
+              <div class="input-box-container">
+                <textarea id="chat-input" class="chat-textarea" rows="1"
+                  placeholder="Nhập câu hỏi nghiệp vụ ngành điện hoặc yêu cầu tra cứu..."
+                  aria-label="Nội dung câu hỏi"></textarea>
+                <div class="input-actions-group">
+                  <button id="btn-stop" class="btn-stop" type="button" title="Dừng luồng phản hồi">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="6" width="12" height="12"></rect>
+                    </svg>
+                    <span>Dừng</span>
+                  </button>
+                  <button id="btn-send" class="btn-send" type="button" title="Gửi câu hỏi (Enter)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="input-footer-note">
+                <span>Phím tắt: <strong>Enter</strong> để gửi, <strong>Shift + Enter</strong> để xuống dòng</span>
+                <span id="cost-stat-display">Ngân sách LLM: <strong class="cost-stat-inline">$0.00 /
+                    $10.00</strong></span>
+              </div>
             </div>
           </div>
-        </div>
         </div>
       </main>
     </div>
@@ -3599,4 +3732,5 @@
     })();
   </script>
 </body>
+
 </html>

@@ -19,17 +19,19 @@ import json
 import logging
 import os
 from pathlib import Path
+import time
+import traceback
 from typing import Any, Dict, List, Optional, Union
 import uuid
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
-from sqlalchemy import text
+from sqlalchemy import select, text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.chat.hoi_thoai import (
@@ -42,8 +44,28 @@ from app.chat.hoi_thoai import (
 )
 from app.chat.ngu_canh import dung_ngu_canh
 from app.config import lay_cau_hinh
-from app.core.database import khoi_tao_db, lay_phien_db
-from app.core.han_muc import VuotHanMucError, kiem_tra_han_muc
+from app.core.database import NguoiDung as NguoiDungDB, khoi_tao_db, lay_phien_db
+from app.core.nhat_ky import (
+    dat_ma_yeu_cau,
+    dat_nguoi_dung_id,
+    ghi_goi_mo_hinh,
+    ghi_http_ra,
+    ghi_http_vao,
+    ghi_kiem_tra_han_muc,
+    ghi_luu_hoi_thoai,
+    ghi_nhat_ky,
+    lay_ma_yeu_cau_hien_tai,
+    lay_nguoi_dung_id_hien_tai,
+    sinh_ma_yeu_cau,
+    thiet_lap_nhat_ky,
+)
+from app.core.han_muc import (
+    VuotHanMucError,
+    bam_ma_thong_bao,
+    kiem_tra_ba_tang_han_muc,
+    kiem_tra_han_muc,
+    lay_thong_tin_nguoi_dung_hien_tai,
+)
 from app.llm.chi_phi import (
     VuotNganSachError,
     kiem_tra_ngan_sach,
@@ -54,11 +76,8 @@ from app.llm.router import goi_mo_hinh, goi_mo_hinh_theo_dong
 # Nạp biến môi trường từ tệp .env khi khởi chạy ứng dụng
 load_dotenv()
 
-# Cấu hình mức độ ghi log cấp hệ thống
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-)
+# Cấu hình mức độ ghi log và định dạng JSON một dòng
+thiet_lap_nhat_ky()
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +87,9 @@ THU_MUC_WEB = Path(__file__).resolve().parent.parent / "web"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Quản lý vòng đời ứng dụng: khởi tạo cơ sở dữ liệu khi khởi động."""
+    """Quản lý vòng đời ứng dụng: cấu hình nhật ký và khởi tạo cơ sở dữ liệu khi khởi động."""
     try:
+        thiet_lap_nhat_ky()
         khoi_tao_db()
     except Exception as e:
         logger.warning(f"Không thể khởi tạo cơ sở dữ liệu lúc khởi động: {e}")
@@ -130,24 +150,176 @@ _cau_hinh_cors(app)
 
 
 # ---------------------------------------------------------------------------
-# Middleware gắn mã yêu cầu (Request ID)
+# Middleware gắn mã yêu cầu và nhật ký truy vết (Request ID & Trace Middleware)
 # ---------------------------------------------------------------------------
 @app.middleware("http")
 async def gan_ma_yeu_cau(request: Request, call_next):
-    """Gắn mã định danh yêu cầu duy nhất cho mỗi lượt gửi để theo dõi sự cố."""
-    ma_yeu_cau = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+    """Gắn mã định danh yêu cầu 12 ký tự, lưu trong contextvars và ghi nhật ký 2 chặng HTTP."""
+    # 1. Chấp nhận mã do phía gọi truyền vào (X-Ma-Yeu-Cau hoặc X-Request-ID) để nối chuỗi truy vết liên dịch vụ
+    ma_truyen_vao = request.headers.get("X-Ma-Yeu-Cau") or request.headers.get("X-Request-ID")
+    if ma_truyen_vao and ma_truyen_vao.strip():
+        ma_yeu_cau = ma_truyen_vao.strip()
+    else:
+        ma_yeu_cau = sinh_ma_yeu_cau()
+
+    # Lưu trong contextvars và request.state
+    dat_ma_yeu_cau(ma_yeu_cau)
     request.state.ma_yeu_cau = ma_yeu_cau
-    response = await call_next(request)
+
+    # Lưu nguoi_dung_id sơ bộ vào contextvars nếu có trong header
+    nguoi_dung_id_header = (
+        request.headers.get("X-User-Id")
+        or request.headers.get("X-Nguoi-Dung-Id")
+        or request.query_params.get("user_id")
+        or "khach"
+    )
+    dat_nguoi_dung_id(str(nguoi_dung_id_header).strip())
+
+    # Chặng 1: http_vao
+    thoi_diem_bat_dau = time.perf_counter()
+    ghi_http_vao(
+        phuong_thuc=request.method,
+        duong_dan=request.url.path,
+        do_tre_ms=0.0,
+    )
+
+    # Tiếp tục luồng xử lý yêu cầu
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        do_tre_tong_ms = round((time.perf_counter() - thoi_diem_bat_dau) * 1000, 2)
+        ghi_http_ra(
+            phuong_thuc=request.method,
+            duong_dan=request.url.path,
+            ma_trang_thai=500,
+            do_tre_ms=do_tre_tong_ms,
+        )
+        raise exc
+
+    # Trả lại mã yêu cầu trong cả header X-Ma-Yeu-Cau và X-Request-ID
+    response.headers["X-Ma-Yeu-Cau"] = ma_yeu_cau
     response.headers["X-Request-ID"] = ma_yeu_cau
+
+    # Chặng 6: http_ra
+    if isinstance(response, StreamingResponse):
+        phan_hoi_goc = response.body_iterator
+
+        async def bọc_luồng_phát():
+            try:
+                async for doan in phan_hoi_goc:
+                    yield doan
+            finally:
+                do_tre_tong_ms = round((time.perf_counter() - thoi_diem_bat_dau) * 1000, 2)
+                ghi_http_ra(
+                    phuong_thuc=request.method,
+                    duong_dan=request.url.path,
+                    ma_trang_thai=response.status_code,
+                    do_tre_ms=do_tre_tong_ms,
+                )
+
+        response.body_iterator = bọc_luồng_phát()
+    else:
+        do_tre_tong_ms = round((time.perf_counter() - thoi_diem_bat_dau) * 1000, 2)
+        ghi_http_ra(
+            phuong_thuc=request.method,
+            duong_dan=request.url.path,
+            ma_trang_thai=response.status_code,
+            do_tre_ms=do_tre_tong_ms,
+        )
+
     return response
 
 
 # ---------------------------------------------------------------------------
-# Tiện ích trích xuất người dùng và mã yêu cầu
+# Tiện ích trích xuất người dùng, địa chỉ IP và mã yêu cầu
 # ---------------------------------------------------------------------------
-def lay_ma_yeu_cau(request: Request) -> str:
-    """Lấy mã yêu cầu từ request.state hoặc sinh mới nếu chưa có."""
-    return getattr(request.state, "ma_yeu_cau", None) or str(uuid.uuid4())
+def lay_ma_yeu_cau(request: Optional[Request] = None) -> str:
+    """Lấy mã yêu cầu từ contextvars hoặc request.state, sinh mới nếu chưa có."""
+    ma = lay_ma_yeu_cau_hien_tai()
+    if ma:
+        return ma
+    if request:
+        return getattr(request.state, "ma_yeu_cau", None) or sinh_ma_yeu_cau()
+    return sinh_ma_yeu_cau()
+
+
+class NguoiDung(BaseModel):
+    """Đối tượng người dùng nghiệp vụ.
+
+    GHI CHÚ: Đây là chỗ sẽ thay bằng nhà cung cấp đăng nhập thật ở giai đoạn sau;
+    mọi nơi khác chỉ phụ thuộc vào đối tượng NguoiDung nên chỉ cần thay ruột hàm này.
+    """
+
+    id: str = Field(description="Mã định danh người dùng")
+    email: str = Field(default="", description="Địa chỉ email")
+    bac: str = Field(default="free", description="Bậc tài khoản ('free' hoặc 'pro')")
+
+
+def lay_dia_chi_ip(request: Request) -> str:
+    """Trích xuất địa chỉ IP của máy khách phục vụ kiểm soát hạn mức Tầng 1."""
+    x_forwarded_for = request.headers.get("X-Forwarded-For")
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(",")[0].strip()
+        if ip:
+            return ip
+    x_real_ip = request.headers.get("X-Real-IP")
+    if x_real_ip and x_real_ip.strip():
+        return x_real_ip.strip()
+    if request.client and request.client.host:
+        return request.client.host
+    return "127.0.0.1"
+
+
+def lay_nguoi_dung_hien_tai(request: Request) -> NguoiDung:
+    """Dependency xác thực người dùng từ Bearer token.
+
+    GHI CHÚ: Đây là chỗ sẽ thay bằng nhà cung cấp đăng nhập thật ở giai đoạn sau;
+    mọi nơi khác chỉ phụ thuộc vào đối tượng NguoiDung nên chỉ cần thay ruột hàm này.
+
+    Quy trình:
+    1. Đọc mã thông báo từ header Authorization dạng 'Bearer <token>'.
+    2. Băm mã thông báo bằng HMAC-SHA256 kết hợp APP_SECRET (chuẩn băm bảo mật, không lưu thô).
+    3. Đối chiếu với bảng nguoi_dung trong cơ sở dữ liệu.
+    4. Trả về đối tượng NguoiDung có trường id, email và bac ('free' hoặc 'pro').
+    """
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.strip():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Thiếu mã thông báo xác thực. Vui lòng gửi header 'Authorization: Bearer <token>'.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    phan_doan = auth_header.strip().split()
+    if len(phan_doan) != 2 or phan_doan[0].lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Định dạng mã thông báo không hợp lệ. Vui lòng dùng dạng 'Bearer <token>'.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token_tho = phan_doan[1].strip()
+    token_hash = bam_ma_thong_bao(token_tho)
+
+    with lay_phien_db() as phien:
+        stmt = select(NguoiDungDB).where(
+            NguoiDungDB.token_hash == token_hash,
+            NguoiDungDB.kich_hoat == True,
+        )
+        nd_db = phien.execute(stmt).scalar_one_or_none()
+
+        if not nd_db:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Mã thông báo không hợp lệ hoặc tài khoản đã bị vô hiệu hóa.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        return NguoiDung(
+            id=str(nd_db.id),
+            email=str(nd_db.email),
+            bac=str(nd_db.bac),
+        )
 
 
 def lay_nguoi_dung_id(request: Request) -> str:
@@ -161,10 +333,29 @@ def lay_nguoi_dung_id(request: Request) -> str:
     return str(nguoi_dung_id).strip() or "khach"
 
 
+def lay_dinh_danh_va_bac(request: Request) -> tuple[str, str]:
+    """Lấy (nguoi_dung_id, bac) từ Bearer token nếu có, hoặc rơi về X-User-Id / khách."""
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.strip().lower().startswith("bearer "):
+        try:
+            nd = lay_nguoi_dung_hien_tai(request)
+            return (nd.id, nd.bac)
+        except HTTPException:
+            pass
+
+    nguoi_dung_id = lay_nguoi_dung_id(request)
+    return (nguoi_dung_id, "free")
+
+
 # ---------------------------------------------------------------------------
 # Bộ xử lý lỗi thống nhất (Global Exception Handlers)
 # ---------------------------------------------------------------------------
-def tao_phan_hoi_loi(status_code: int, thong_diep: str, ma_yeu_cau: str) -> JSONResponse:
+def tao_phan_hoi_loi(
+    status_code: int,
+    thong_diep: str,
+    ma_yeu_cau: str,
+    headers: Optional[dict] = None,
+) -> JSONResponse:
     """Tạo đối tượng JSONResponse lỗi theo đúng định dạng {loi: {ma, thong_diep, ma_yeu_cau}}."""
     noi_dung = {
         "loi": {
@@ -173,24 +364,63 @@ def tao_phan_hoi_loi(status_code: int, thong_diep: str, ma_yeu_cau: str) -> JSON
             "ma_yeu_cau": ma_yeu_cau,
         },
         "detail": thong_diep,
+        "ma": status_code,
+        "ma_yeu_cau": ma_yeu_cau,
     }
-    return JSONResponse(status_code=status_code, content=noi_dung)
+    phan_hoi_headers = dict(headers or {})
+    phan_hoi_headers["X-Ma-Yeu-Cau"] = ma_yeu_cau
+    phan_hoi_headers["X-Request-ID"] = ma_yeu_cau
+    return JSONResponse(status_code=status_code, content=noi_dung, headers=phan_hoi_headers)
 
 
 @app.exception_handler(VuotHanMucError)
 async def xu_ly_vuot_han_muc(request: Request, exc: VuotHanMucError):
-    """Bắt lỗi khi người dùng vượt quá hạn mức yêu cầu trong 1 giờ."""
+    """Bắt lỗi khi yêu cầu vượt quá một trong ba tầng hạn mức."""
     ma_yeu_cau = lay_ma_yeu_cau(request)
-    logger.warning(f"[Hạn mức 429] ma_yeu_cau={ma_yeu_cau}: {exc}")
-    thong_diep = str(exc) or "Bạn đã vượt quá số lượt yêu cầu cho phép trong 1 giờ. Vui lòng thử lại sau."
-    return tao_phan_hoi_loi(status.HTTP_429_TOO_MANY_REQUESTS, thong_diep, ma_yeu_cau)
+    ghi_nhat_ky(
+        chang="kiem_tra_han_muc",
+        thong_diep=f"[Hạn mức 429] tang={exc.tang_han_muc}, retry_after={exc.retry_after}s: {exc.thong_diep}",
+        do_tre_ms=0.0,
+        muc="WARNING",
+        ma_yeu_cau=ma_yeu_cau,
+        tang_han_muc=exc.tang_han_muc,
+        retry_after=exc.retry_after,
+    )
+    headers = {
+        "Retry-After": str(exc.retry_after),
+        "X-Ma-Yeu-Cau": ma_yeu_cau,
+        "X-Request-ID": ma_yeu_cau,
+    }
+    noi_dung = {
+        "loi": {
+            "ma": status.HTTP_429_TOO_MANY_REQUESTS,
+            "thong_diep": exc.thong_diep,
+            "ma_yeu_cau": ma_yeu_cau,
+            "retry_after": exc.retry_after,
+            "tang_han_muc": exc.tang_han_muc,
+        },
+        "detail": exc.thong_diep,
+        "ma": status.HTTP_429_TOO_MANY_REQUESTS,
+        "ma_yeu_cau": ma_yeu_cau,
+    }
+    return JSONResponse(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        content=noi_dung,
+        headers=headers,
+    )
 
 
 @app.exception_handler(VuotNganSachError)
 async def xu_ly_vuot_ngan_sach(request: Request, exc: VuotNganSachError):
     """Bắt lỗi khi tổng chi phí trong ngày vượt quá ngân sách cho phép."""
     ma_yeu_cau = lay_ma_yeu_cau(request)
-    logger.error(f"[Ngân sách 503] ma_yeu_cau={ma_yeu_cau}: {exc}")
+    ghi_nhat_ky(
+        chang="kiem_tra_han_muc",
+        thong_diep=f"[Ngân sách 503] {exc}",
+        do_tre_ms=0.0,
+        muc="ERROR",
+        ma_yeu_cau=ma_yeu_cau,
+    )
     thong_diep = str(exc) or "Hệ thống đã đạt giới hạn ngân sách hàng ngày. Vui lòng thử lại sau."
     return tao_phan_hoi_loi(status.HTTP_503_SERVICE_UNAVAILABLE, thong_diep, ma_yeu_cau)
 
@@ -199,7 +429,14 @@ async def xu_ly_vuot_ngan_sach(request: Request, exc: VuotNganSachError):
 async def xu_ly_http_exception(request: Request, exc: StarletteHTTPException):
     """Bắt các lỗi HTTP tiêu chuẩn (404, 400, 403, 503...)."""
     ma_yeu_cau = lay_ma_yeu_cau(request)
-    logger.warning(f"[HTTP {exc.status_code}] ma_yeu_cau={ma_yeu_cau}: {exc.detail}")
+    ghi_nhat_ky(
+        chang="http_ra",
+        thong_diep=f"[HTTP {exc.status_code}] {exc.detail}",
+        do_tre_ms=0.0,
+        muc="WARNING" if exc.status_code < 500 else "ERROR",
+        ma_yeu_cau=ma_yeu_cau,
+        ma_trang_thai=exc.status_code,
+    )
 
     thong_diep_map = {
         400: "Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin gửi lên.",
@@ -209,7 +446,6 @@ async def xu_ly_http_exception(request: Request, exc: StarletteHTTPException):
         422: "Dữ liệu gửi lên không đúng định dạng quy định.",
         503: "Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau.",
     }
-    # Dùng thông điệp chi tiết nếu đã được viết tiếng Việt rõ nghĩa, ngược lại ánh xạ theo bảng
     thong_diep = str(exc.detail) if exc.detail and isinstance(exc.detail, str) and not exc.detail.startswith("Not Found") else thong_diep_map.get(exc.status_code, "Đã xảy ra lỗi khi xử lý yêu cầu.")
     return tao_phan_hoi_loi(exc.status_code, thong_diep, ma_yeu_cau)
 
@@ -218,20 +454,46 @@ async def xu_ly_http_exception(request: Request, exc: StarletteHTTPException):
 async def xu_ly_validation_error(request: Request, exc: RequestValidationError):
     """Bắt lỗi khi dữ liệu đầu vào không vượt qua xác thực Pydantic."""
     ma_yeu_cau = lay_ma_yeu_cau(request)
-    # Ghi chi tiết kỹ thuật vào nhật ký hệ thống, không để lộ ra ngoài
-    logger.warning(f"[Validation Error 422] ma_yeu_cau={ma_yeu_cau}: {exc.errors()}")
+    ghi_nhat_ky(
+        chang="http_vao",
+        thong_diep="Dữ liệu đầu vào không hợp lệ (Validation Error 422)",
+        do_tre_ms=0.0,
+        muc="WARNING",
+        ma_yeu_cau=ma_yeu_cau,
+        so_loi=len(exc.errors()),
+    )
     thong_diep = "Dữ liệu gửi lên không hợp lệ hoặc thiếu trường bắt buộc. Vui lòng kiểm tra lại."
     return tao_phan_hoi_loi(status.HTTP_422_UNPROCESSABLE_ENTITY, thong_diep, ma_yeu_cau)
 
 
 @app.exception_handler(Exception)
 async def xu_ly_ngoai_le_chung(request: Request, exc: Exception):
-    """Bắt toàn bộ các lỗi nội bộ hệ thống chưa được phân loại (500)."""
+    """Bắt toàn bộ các lỗi nội bộ hệ thống chưa được phân loại (500).
+
+    QUY TẮC 5: Ghi nguyên vết lỗi (traceback) vào nhật ký kèm ma_yeu_cau,
+    nhưng CHỈ trả ra ngoài mã lỗi và ma_yeu_cau để người dùng đọc cho bộ phận hỗ trợ.
+    """
     ma_yeu_cau = lay_ma_yeu_cau(request)
-    # Chi tiết kỹ thuật CHỈ ghi vào nhật ký máy chủ
-    logger.error(f"[Lỗi hệ thống 500] ma_yeu_cau={ma_yeu_cau}: {exc}", exc_info=True)
-    thong_diep = "Đã xảy ra lỗi trong quá trình xử lý hệ thống. Vui lòng liên hệ quản trị viên hoặc thử lại sau."
-    return tao_phan_hoi_loi(status.HTTP_500_INTERNAL_SERVER_ERROR, thong_diep, ma_yeu_cau)
+    vet_loi = traceback.format_exc()
+    # Chi tiết kỹ thuật CHỈ ghi vào nhật ký máy chủ kèm ma_yeu_cau
+    ghi_nhat_ky(
+        chang="he_thong",
+        thong_diep=f"Lỗi hệ thống chưa phân loại: {type(exc).__name__}: {str(exc)}",
+        do_tre_ms=0.0,
+        muc="ERROR",
+        ma_yeu_cau=ma_yeu_cau,
+        vet_loi=vet_loi,
+    )
+    # Trả ra ngoài CHỈ có mã lỗi và ma_yeu_cau
+    headers = {"X-Ma-Yeu-Cau": ma_yeu_cau, "X-Request-ID": ma_yeu_cau}
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "ma": 500,
+            "ma_yeu_cau": ma_yeu_cau,
+        },
+        headers=headers,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -322,6 +584,20 @@ class PhanHoiXoaHoiThoai(BaseModel):
     thanh_cong: bool = Field(default=True, description="Trạng thái xoá thành công")
     thong_diep: str = Field(description="Thông điệp kết quả")
     hoi_thoai_id: str = Field(description="Mã định danh phiên hội thoại vừa xoá")
+
+
+class ThongTinToi(BaseModel):
+    """Mô hình dữ liệu trả về cho endpoint GET /toi."""
+
+    id: str = Field(description="Mã định danh người dùng")
+    email: str = Field(description="Địa chỉ email người dùng")
+    bac: str = Field(description="Bậc tài khoản ('free' hoặc 'pro')")
+    da_dung_gio: int = Field(description="Số lượt yêu cầu đã thực hiện trong 1 giờ qua")
+    han_muc_gio: int = Field(description="Hạn mức số lượt yêu cầu tối đa trong 1 giờ")
+    so_luot_con_lai_gio: int = Field(description="Số lượt yêu cầu còn lại trong giờ")
+    da_tieu_ngay_usd: float = Field(description="Tổng chi phí đã tiêu hôm nay (USD)")
+    han_muc_chi_phi_ngay_usd: float = Field(description="Hạn mức chi phí tối đa hôm nay (USD)")
+    chi_phi_con_lai_ngay_usd: float = Field(description="Chi phí còn lại hôm nay (USD)")
 
 
 def chuan_hoa_van_ban_dau_vao(yeu_cau: Union[YeuCauChatStream, YeuCauChat]) -> str:
@@ -429,6 +705,47 @@ async def xem_chi_phi():
     return lay_thong_ke_chi_phi_ngay()
 
 
+@app.get("/toi", response_model=ThongTinToi)
+async def xem_thong_tin_toi(
+    request: Request,
+    nguoi_dung: NguoiDung = Depends(lay_nguoi_dung_hien_tai),
+):
+    """Trả về thông tin người dùng hiện tại: bậc, đã dùng bao nhiêu trong giờ này, đã tiêu bao nhiêu hôm nay, hạn mức còn lại.
+
+    Kiểm tra ba tầng hạn mức theo đúng thứ tự (rẻ trước, đắt sau):
+    1. Theo địa chỉ IP (chặn dồn dập, áp dụng cả với yêu cầu chưa xác thực)
+    2. Theo người dùng mỗi giờ (HAN_MUC_MOI_NGUOI_GIO, bậc pro nhân hệ số)
+    3. Theo chi phí ngày của từng người dùng (chặn tiêu quá nhiều dù chưa chạm ngân sách tổng)
+    """
+    ip_client = lay_dia_chi_ip(request)
+
+    # 1. Kiểm tra và ghi nhận 3 tầng hạn mức
+    kiem_tra_ba_tang_han_muc(
+        ip=ip_client,
+        nguoi_dung_id=nguoi_dung.id,
+        bac=nguoi_dung.bac,
+        ghi_nhan=True,
+    )
+
+    # 2. Lấy thống kê mức sử dụng
+    thong_tin = lay_thong_tin_nguoi_dung_hien_tai(
+        nguoi_dung_id=nguoi_dung.id,
+        bac=nguoi_dung.bac,
+    )
+
+    return ThongTinToi(
+        id=nguoi_dung.id,
+        email=nguoi_dung.email,
+        bac=nguoi_dung.bac,
+        da_dung_gio=thong_tin["da_dung_gio"],
+        han_muc_gio=thong_tin["han_muc_gio"],
+        so_luot_con_lai_gio=thong_tin["so_luot_con_lai_gio"],
+        da_tieu_ngay_usd=thong_tin["da_tieu_ngay_usd"],
+        han_muc_chi_phi_ngay_usd=thong_tin["han_muc_chi_phi_ngay_usd"],
+        chi_phi_con_lai_ngay_usd=thong_tin["chi_phi_con_lai_ngay_usd"],
+    )
+
+
 # ---------------------------------------------------------------------------
 # Endpoints quản lý hội thoại
 # ---------------------------------------------------------------------------
@@ -439,7 +756,7 @@ async def lay_cac_hoi_thoai(
     bo_qua: int = Query(default=0, ge=0, description="Số lượng hội thoại bỏ qua (phân trang)"),
 ):
     """Danh sách các phiên hội thoại của người dùng hiện tại, sắp xếp theo thời gian cập nhật giảm dần."""
-    nguoi_dung_id = lay_nguoi_dung_id(request)
+    nguoi_dung_id, _ = lay_dinh_danh_va_bac(request)
     cac_hoi_thoai = danh_sach_hoi_thoai(
         nguoi_dung_id=nguoi_dung_id,
         gioi_han=gioi_han,
@@ -460,7 +777,7 @@ async def lay_cac_hoi_thoai(
 @app.get("/hoi-thoai/{id}", response_model=List[ChiTietTinNhan])
 async def lay_chi_tiet_hoi_thoai(id: str, request: Request):
     """Toàn bộ tin nhắn của một hội thoại. Trả về 404 nếu hội thoại không thuộc người dùng hiện tại."""
-    nguoi_dung_id = lay_nguoi_dung_id(request)
+    nguoi_dung_id, _ = lay_dinh_danh_va_bac(request)
     hoi_thoai = lay_hoi_thoai(id)
     if not hoi_thoai or hoi_thoai.nguoi_dung_id != nguoi_dung_id:
         raise HTTPException(
@@ -486,7 +803,7 @@ async def lay_chi_tiet_hoi_thoai(id: str, request: Request):
 @app.delete("/hoi-thoai/{id}", response_model=PhanHoiXoaHoiThoai)
 async def xoa_phien_hoi_thoai(id: str, request: Request):
     """Xoá một phiên hội thoại và toàn bộ tin nhắn liên quan. Trả 404 nếu không thuộc người dùng."""
-    nguoi_dung_id = lay_nguoi_dung_id(request)
+    nguoi_dung_id, _ = lay_dinh_danh_va_bac(request)
     hoi_thoai = lay_hoi_thoai(id)
     if not hoi_thoai or hoi_thoai.nguoi_dung_id != nguoi_dung_id:
         raise HTTPException(
@@ -524,13 +841,21 @@ async def chat_stream(yeu_cau: YeuCauChatStream, request: Request):
     6. Gọi mô hình theo dòng qua bộ định tuyến.
     7. Lưu tin nhắn người dùng và câu trả lời vào cơ sở dữ liệu.
     """
-    nguoi_dung_id = lay_nguoi_dung_id(request)
+    ip_client = lay_dia_chi_ip(request)
+    nguoi_dung_id, bac = lay_dinh_danh_va_bac(request)
+    dat_nguoi_dung_id(nguoi_dung_id)
 
-    # 1. Kiểm tra hạn mức người dùng
-    kiem_tra_han_muc(nguoi_dung_id)
-
-    # 2. Kiểm tra trần ngân sách ngày
+    # Chặng 2: kiem_tra_han_muc
+    t_hm = time.perf_counter()
+    kiem_tra_ba_tang_han_muc(
+        ip=ip_client,
+        nguoi_dung_id=nguoi_dung_id,
+        bac=bac,
+        ghi_nhan=True,
+    )
     kiem_tra_ngan_sach()
+    do_tre_hm = round((time.perf_counter() - t_hm) * 1000, 2)
+    ghi_kiem_tra_han_muc(nguoi_dung_id=nguoi_dung_id, bac=bac, do_tre_ms=do_tre_hm)
 
     # 3. Quản lý phiên hội thoại
     hoi_thoai_id = yeu_cau.hoi_thoai_id
@@ -589,7 +914,8 @@ async def chat_stream(yeu_cau: YeuCauChatStream, request: Request):
                     yield f"data: {json.dumps(du_lieu, ensure_ascii=False)}\n\n"
 
                 elif manh.loai == "xong":
-                    # Lưu cả tin nhắn người dùng và câu trả lời vào cơ sở dữ liệu
+                    # Chặng 5: luu_hoi_thoai
+                    t_db = time.perf_counter()
                     try:
                         if van_ban_user:
                             luu_tin_nhan(
@@ -606,8 +932,22 @@ async def chat_stream(yeu_cau: YeuCauChatStream, request: Request):
                             token_uoc_tinh=manh.token_ra,
                         )
                         da_luu_tin_nhan = True
+                        do_tre_db = round((time.perf_counter() - t_db) * 1000, 2)
+                        ghi_luu_hoi_thoai(hoi_thoai_id=hoi_thoai_id, do_tre_ms=do_tre_db)
                     except Exception as e_db:
                         logger.error(f"[Chat Stream] Lỗi khi lưu tin nhắn vào CSDL: {e_db}")
+
+                    # Chặng 4: goi_mo_hinh
+                    ghi_goi_mo_hinh(
+                        tang=manh.tang_phuc_vu or 1,
+                        model=manh.ten_model or "",
+                        token_vao=manh.token_vao,
+                        token_ra=manh.token_ra,
+                        chi_phi_usd=manh.chi_phi_usd,
+                        so_lan_thu=manh.so_lan_thu,
+                        danh_sach_tang_da_hong=manh.danh_sach_tang_da_hong,
+                        do_tre_ms=manh.do_tre_ms,
+                    )
 
                     du_lieu = {
                         "loai": "xong",
@@ -711,13 +1051,21 @@ async def chat_dong_bo(yeu_cau: YeuCauChat, request: Request):
 
     Trả về đầy đủ siêu dữ liệu cuộc gọi: tầng phục vụ, model, token, chi phí, độ trễ.
     """
-    nguoi_dung_id = lay_nguoi_dung_id(request)
+    ip_client = lay_dia_chi_ip(request)
+    nguoi_dung_id, bac = lay_dinh_danh_va_bac(request)
+    dat_nguoi_dung_id(nguoi_dung_id)
 
-    # 1. Kiểm tra hạn mức người dùng
-    kiem_tra_han_muc(nguoi_dung_id)
-
-    # 2. Kiểm tra trần ngân sách ngày
+    # Chặng 2: kiem_tra_han_muc
+    t_hm = time.perf_counter()
+    kiem_tra_ba_tang_han_muc(
+        ip=ip_client,
+        nguoi_dung_id=nguoi_dung_id,
+        bac=bac,
+        ghi_nhan=True,
+    )
     kiem_tra_ngan_sach()
+    do_tre_hm = round((time.perf_counter() - t_hm) * 1000, 2)
+    ghi_kiem_tra_han_muc(nguoi_dung_id=nguoi_dung_id, bac=bac, do_tre_ms=do_tre_hm)
 
     # 3. Quản lý phiên hội thoại
     hoi_thoai_id = yeu_cau.hoi_thoai_id
@@ -734,7 +1082,7 @@ async def chat_dong_bo(yeu_cau: YeuCauChat, request: Request):
 
     van_ban_user = chuan_hoa_van_ban_dau_vao(yeu_cau)
 
-    # 4. Dựng ngữ cảnh hội thoại
+    # 4. Dựng ngữ cảnh hội thoại (Chặng 3: dung_ngu_canh được ghi nhận tự động trong dung_ngu_canh)
     tin_nhan_gui_llm = dung_ngu_canh(
         hoi_thoai_id=hoi_thoai_id,
         tin_nhan_moi=van_ban_user,
@@ -749,16 +1097,29 @@ async def chat_dong_bo(yeu_cau: YeuCauChat, request: Request):
     if isinstance(yeu_cau.tuy_chon, dict):
         tham_so.update(yeu_cau.tuy_chon)
 
-    # 5. Gọi mô hình qua bộ định tuyến (không phát theo dòng)
+    # 5. Gọi mô hình qua bộ định tuyến
     ket_qua = await goi_mo_hinh(
         tin_nhan=tin_nhan_gui_llm,
         phat_theo_dong=False,
         **tham_so,
     )
 
+    # Chặng 4: goi_mo_hinh
+    ghi_goi_mo_hinh(
+        tang=ket_qua.tang_phuc_vu,
+        model=ket_qua.ten_model,
+        token_vao=ket_qua.token_vao,
+        token_ra=ket_qua.token_ra,
+        chi_phi_usd=ket_qua.chi_phi_usd,
+        so_lan_thu=ket_qua.so_lan_thu,
+        danh_sach_tang_da_hong=ket_qua.danh_sach_tang_da_hong,
+        do_tre_ms=ket_qua.do_tre_ms,
+    )
+
     cau_tra_loi = str(ket_qua.noi_dung or "")
 
-    # 6. Lưu tin nhắn người dùng và câu trả lời trợ lý
+    # Chặng 5: luu_hoi_thoai
+    t_db = time.perf_counter()
     try:
         if van_ban_user:
             luu_tin_nhan(
@@ -775,6 +1136,8 @@ async def chat_dong_bo(yeu_cau: YeuCauChat, request: Request):
         )
     except Exception as e_db:
         logger.error(f"[Chat M2M] Lỗi khi lưu tin nhắn vào CSDL: {e_db}")
+    do_tre_db = round((time.perf_counter() - t_db) * 1000, 2)
+    ghi_luu_hoi_thoai(hoi_thoai_id=hoi_thoai_id, do_tre_ms=do_tre_db)
 
     return PhanHoiChat(
         hoi_thoai_id=hoi_thoai_id,

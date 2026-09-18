@@ -204,6 +204,92 @@ class LuotGoi(Base):
     )
 
 
+class NguoiDung(Base):
+    """Mô hình bảng người dùng và thông tin xác thực."""
+
+    __tablename__ = "nguoi_dung"
+
+    id: Mapped[str] = mapped_column(
+        String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    email: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    bac: Mapped[str] = mapped_column(
+        String(20),
+        default="free",
+        nullable=False,
+    )
+    token_hash: Mapped[str] = mapped_column(
+        String(128),
+        unique=True,
+        index=True,
+        nullable=False,
+    )
+    token_prefix: Mapped[Optional[str]] = mapped_column(
+        String(20),
+        nullable=True,
+    )
+    kich_hoat: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False,
+    )
+    tao_luc: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    cap_nhat_luc: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "bac IN ('free', 'pro')",
+            name="ck_nguoi_dung_bac",
+        ),
+    )
+
+
+class YeuCauHanMuc(Base):
+    """Mô hình bảng lưu trữ mốc thời gian yêu cầu để thực thi thuật toán cửa sổ trượt."""
+
+    __tablename__ = "yeu_cau_han_muc"
+
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        autoincrement=True,
+    )
+    loai: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,  # 'ip' hoặc 'nguoi_dung'
+    )
+    khoa: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,  # IP hoặc nguoi_dung_id
+    )
+    thoi_diem: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        Index("ix_yeu_cau_han_muc_loai_khoa_thoi_diem", "loai", "khoa", "thoi_diem"),
+        Index("ix_yeu_cau_han_muc_thoi_diem", "thoi_diem"),
+    )
+
+
 # Quản lý Engine và SessionFactory dưới dạng singleton
 _engine = None
 _session_factory = None
@@ -217,18 +303,19 @@ def tao_engine(database_url: Optional[str] = None):
         except Exception:
             database_url = "sqlite:///chatbot_evn.db"
 
-    # Kết nối SQLite cần cấu hình check_same_thread=False
-    if database_url.startswith("sqlite"):
+    # Nếu chuỗi kết nối là placeholder mẫu hoặc SQLite, dùng ngay SQLite cục bộ
+    if not database_url or "dan-khoa-that-vao-day" in database_url or database_url.startswith("sqlite"):
         return create_engine(
-            database_url,
+            "sqlite:///chatbot_evn.db" if not database_url.startswith("sqlite") else database_url,
             connect_args={"check_same_thread": False},
             echo=False,
         )
 
-    # Kết nối PostgreSQL với hồ chứa kết nối (connection pool)
+    # Kết nối PostgreSQL với hồ chứa kết nối (connection pool) và timeout nhanh
     try:
         return create_engine(
             database_url,
+            connect_args={"connect_timeout": 3},
             pool_pre_ping=True,
             pool_size=10,
             max_overflow=20,
@@ -254,7 +341,10 @@ def lay_engine():
         try:
             Base.metadata.create_all(bind=_engine)
         except Exception as e:
-            logger.warning(f"Lỗi tự động tạo bảng: {e}")
+            logger.warning(f"Lỗi tự động tạo bảng với engine chính: {e}. Chuyển fallback sang SQLite cục bộ.")
+            _engine = create_engine("sqlite:///chatbot_evn.db", connect_args={"check_same_thread": False})
+            _session_factory = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
+            Base.metadata.create_all(bind=_engine)
     return _engine
 
 

@@ -372,6 +372,7 @@ async def goi_mo_hinh(
         # Chuẩn bị tham số cho lượt gọi tầng này
         tham_so_goi = dict(tang.tham_so_them or {})
         tham_so_goi.update(tuy_chon)
+        nguoi_dung_id = str(tham_so_goi.pop("nguoi_dung_id", "khach") or "khach")
         if "max_tokens" not in tham_so_goi:
             tham_so_goi["max_tokens"] = cai_dat_chung.gioi_han_token_ra
 
@@ -471,6 +472,7 @@ async def goi_mo_hinh(
                         chi_phi_usd=chi_phi_usd,
                         do_tre_ms=round(do_tre_ms, 2),
                         thanh_cong=True,
+                        nguoi_dung_id=nguoi_dung_id,
                         ghi_chu=ghi_chu,
                     )
 
@@ -609,6 +611,7 @@ async def goi_mo_hinh_theo_dong(
         # Chuẩn bị tham số cho lượt gọi tầng này
         tham_so_goi = dict(tang.tham_so_them or {})
         tham_so_goi.update(tuy_chon)
+        nguoi_dung_id = str(tham_so_goi.pop("nguoi_dung_id", "khach") or "khach")
         if "max_tokens" not in tham_so_goi:
             tham_so_goi["max_tokens"] = cai_dat_chung.gioi_han_token_ra
 
@@ -691,6 +694,7 @@ async def goi_mo_hinh_theo_dong(
                         chi_phi_usd=0.0,
                         do_tre_ms=round((time.perf_counter() - thoi_gian_bat_dau) * 1000.0, 2),
                         thanh_cong=False,
+                        nguoi_dung_id=nguoi_dung_id,
                         ghi_chu=f"loi_giua_chung: {e}",
                     )
                     yield ManhPhatRa.tao_manh_loi(
@@ -786,6 +790,7 @@ async def goi_mo_hinh_theo_dong(
                     chi_phi_usd=chi_phi_usd,
                     do_tre_ms=round(do_tre_ms, 2),
                     thanh_cong=True,
+                    nguoi_dung_id=nguoi_dung_id,
                     ghi_chu=ghi_chu,
                 )
 

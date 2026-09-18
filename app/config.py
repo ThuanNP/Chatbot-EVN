@@ -119,6 +119,10 @@ class CaiDatMoiTruong(BaseSettings):
         default="development",
         description="Môi trường thực thi (development, staging, production)"
     )
+    CORS_ORIGINS: str = Field(
+        default="http://localhost:3000,http://localhost:8000,http://127.0.0.1:3000,http://127.0.0.1:8000",
+        description="Danh sách các miền được phép truy cập CORS, phân tách bằng dấu phẩy"
+    )
 
 
 class CauHinhHeThong(BaseModel):

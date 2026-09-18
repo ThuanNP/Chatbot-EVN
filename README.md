@@ -1,6 +1,14 @@
 # Chatbot EVN
 
-Hệ thống AI Chatbot phục vụ nghiệp vụ EVN với kiến trúc dự phòng đa mô hình (Gemini → OpenRouter/auto → Claude → OpenAI), phản hồi streaming theo thời gian thực và quản lý ngân sách chặt chẽ.
+Hệ thống AI Chatbot phục vụ nghiệp vụ EVN với kiến trúc dự phòng đa mô hình
+(Gemini → OpenRouter/auto → Claude → OpenAI), phản hồi streaming theo thời gian
+thực và quản lý ngân sách chặt chẽ.
+
+## Mục đích và đối tượng sử dụng
+
+- **Mục đích**: Hệ thống AI Chatbot phục vụ nghiệp vụ EVN, hỗ trợ xử lý công
+  việc và tác nghiệp chuyên môn.
+- **Đối tượng sử dụng**: Cán bộ, nhân viên EVN.
 
 ## Cấu trúc thư mục
 

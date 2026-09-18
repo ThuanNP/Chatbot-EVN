@@ -18,6 +18,7 @@ from datetime import datetime, timezone
 import json
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 import uuid
 
@@ -25,7 +26,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -59,6 +61,9 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Thư mục chứa giao diện web tĩnh
+THU_MUC_WEB = Path(__file__).resolve().parent.parent / "web"
 
 
 @asynccontextmanager
@@ -338,9 +343,12 @@ def chuan_hoa_van_ban_dau_vao(yeu_cau: Union[YeuCauChatStream, YeuCauChat]) -> s
 # ---------------------------------------------------------------------------
 # Endpoint cơ bản và kiểm tra sức khoẻ
 # ---------------------------------------------------------------------------
-@app.get("/")
+@app.get("/", include_in_schema=False)
 async def trang_chu():
-    """Endpoint gốc thông báo thông tin ứng dụng."""
+    """Endpoint gốc phục vụ giao diện web hoặc thông tin dịch vụ."""
+    tap_tin_index = THU_MUC_WEB / "index.html"
+    if tap_tin_index.exists():
+        return FileResponse(tap_tin_index)
     return {
         "ten": "Chatbot EVN",
         "phien_ban": "0.1.0",
@@ -384,6 +392,8 @@ async def kiem_tra_san_sang():
         logger.error(f"[Ready Check] Lỗi khi đọc cấu hình chuỗi dự phòng: {e}")
         mo_hinh_san_sang = False
 
+    headers_khong_cache = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+
     if not db_san_sang or not mo_hinh_san_sang:
         ly_do = []
         if not db_san_sang:
@@ -398,14 +408,19 @@ async def kiem_tra_san_sang():
                 "co_so_du_lieu": "san_sang" if db_san_sang else "chua_ket_noi",
                 "so_tang_mo_hinh_kha_dung": so_tang_kha_dung,
             },
+            headers=headers_khong_cache,
         )
 
-    return {
-        "trang_thai": "san_sang",
-        "dich_vu": "Chatbot-EVN",
-        "co_so_du_lieu": "san_sang",
-        "so_tang_mo_hinh_kha_dung": so_tang_kha_dung,
-    }
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "trang_thai": "san_sang",
+            "dich_vu": "Chatbot-EVN",
+            "co_so_du_lieu": "san_sang",
+            "so_tang_mo_hinh_kha_dung": so_tang_kha_dung,
+        },
+        headers=headers_khong_cache,
+    )
 
 
 @app.get("/chi-phi")
@@ -676,6 +691,17 @@ async def chat_stream(yeu_cau: YeuCauChatStream, request: Request):
     )
 
 
+@app.get("/chat/stream")
+async def chat_stream_get(
+    request: Request,
+    tin_nhan: str = Query(..., description="Nội dung tin nhắn"),
+    hoi_thoai_id: Optional[str] = Query(default=None, description="Mã định danh phiên hội thoại"),
+):
+    """Bản GET của SSE stream hỗ trợ trực tiếp trình duyệt EventSource."""
+    yeu_cau = YeuCauChatStream(tin_nhan=tin_nhan, hoi_thoai_id=hoi_thoai_id)
+    return await chat_stream(yeu_cau, request)
+
+
 # ---------------------------------------------------------------------------
 # POST /chat: Bản không phát theo dòng cho máy-với-máy
 # ---------------------------------------------------------------------------
@@ -762,3 +788,10 @@ async def chat_dong_bo(yeu_cau: YeuCauChat, request: Request):
         so_lan_thu=ket_qua.so_lan_thu,
         danh_sach_tang_da_hong=ket_qua.danh_sach_tang_da_hong,
     )
+
+
+# ---------------------------------------------------------------------------
+# Phục vụ thư mục web tại đường dẫn gốc
+# ---------------------------------------------------------------------------
+if THU_MUC_WEB.exists():
+    app.mount("/", StaticFiles(directory=str(THU_MUC_WEB), html=True), name="web")

@@ -74,6 +74,8 @@ def test_ready_khi_he_thong_san_sang():
     """Kiểm tra GET /ready trả về 200 khi CSDL kết nối tốt và có ít nhất 1 tầng khả dụng."""
     resp = client.get("/ready")
     assert resp.status_code == 200
+    assert "no-cache" in resp.headers.get("cache-control", "")
+    assert "no-store" in resp.headers.get("cache-control", "")
     du_lieu = resp.json()
     assert du_lieu["trang_thai"] == "san_sang"
     assert du_lieu["co_so_du_lieu"] == "san_sang"
@@ -85,6 +87,8 @@ def test_ready_tra_ve_503_khi_csdl_loi():
     with patch("app.main.lay_phien_db", side_effect=Exception("Mất kết nối PostgreSQL")):
         resp = client.get("/ready")
         assert resp.status_code == 503
+        assert "no-cache" in resp.headers.get("cache-control", "")
+        assert "no-store" in resp.headers.get("cache-control", "")
         du_lieu = resp.json()
         assert du_lieu["trang_thai"] == "chua_san_sang"
         assert "Cơ sở dữ liệu chưa sẵn sàng" in du_lieu["ly_do"]
@@ -95,9 +99,32 @@ def test_ready_tra_ve_503_khi_khong_co_tang_model_nao():
     with patch("app.config.CauHinhHeThong.lay_khoa_api", return_value=""):
         resp = client.get("/ready")
         assert resp.status_code == 503
+        assert "no-cache" in resp.headers.get("cache-control", "")
+        assert "no-store" in resp.headers.get("cache-control", "")
         du_lieu = resp.json()
         assert du_lieu["trang_thai"] == "chua_san_sang"
         assert "Chưa có tầng mô hình nào khả dụng" in du_lieu["ly_do"]
+
+
+def test_giao_dien_phan_anh_ready_theo_thoi_gian_thuc():
+    """Kiểm tra giao diện web index.html có logic kiểm tra GET /ready theo thời gian thực."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    noi_dung = resp.text
+    # Phải gọi endpoint /ready thay vì chỉ kiểm tra /health
+    assert "/ready" in noi_dung
+    # Phải có hàm kiểm tra tính sẵn sàng checkSystemReady
+    assert "checkSystemReady" in noi_dung
+    # Phải có trạng thái 'Kết nối: Gián đoạn' khi hệ thống không sẵn sàng
+    assert "Kết nối: Gián đoạn" in noi_dung
+    # Phải có trạng thái 'Kết nối: Sẵn sàng' khi hệ thống sẵn sàng
+    assert "Kết nối: Sẵn sàng" in noi_dung
+    # Phải có cơ chế polling định kỳ theo thời gian thực (setInterval)
+    assert "setInterval(checkSystemReady" in noi_dung
+    # Phải có các event listener online/offline/visibilitychange
+    assert "window.addEventListener('online'" in noi_dung
+    assert "window.addEventListener('offline'" in noi_dung
+
 
 
 def test_get_hoi_thoai_danh_sach_va_phan_trang():
@@ -347,3 +374,68 @@ def test_vuot_han_muc_tra_ve_429():
             assert "loi" in data_429
             assert data_429["loi"]["ma"] == 429
             assert "vượt quá" in data_429["loi"]["thong_diep"].lower()
+
+
+def test_get_trang_chu_phuc_vu_html():
+    """Kiểm tra GET / phục vụ giao diện web index.html với mã 200 và Content-Type text/html."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "text/html" in resp.headers.get("content-type", "")
+    assert "Chatbot EVN" in resp.text
+    assert "id=\"chat-input\"" in resp.text
+
+
+@pytest.mark.asyncio
+async def test_get_chat_stream_cho_eventsource():
+    """Kiểm tra GET /chat/stream phát SSE với query parameters hỗ trợ trình duyệt EventSource."""
+    from app.llm.router import ManhPhatRa
+
+    ket_qua_cuoi = KetQuaGoi(
+        noi_dung="Phản hồi qua GET SSE.",
+        tang_phuc_vu=1,
+        ten_model="gemini/gemini-3.6-flash",
+        token_vao=10,
+        token_ra=20,
+        do_tre_ms=150.0,
+        so_lan_thu=1,
+        danh_sach_tang_da_hong=[],
+        chi_phi_usd=0.00001,
+    )
+
+    async def mock_generator(*args, **kwargs):
+        yield ManhPhatRa.tao_manh_noi_dung("Phản hồi ")
+        yield ManhPhatRa.tao_manh_noi_dung("qua GET SSE.")
+        yield ManhPhatRa.tao_manh_ket_thuc(ket_qua_cuoi)
+
+    with patch("app.main.goi_mo_hinh_theo_dong", side_effect=mock_generator):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.get(
+                "/chat/stream?tin_nhan=Chao+EVN",
+                headers={"X-User-Id": "user_browser"},
+            )
+
+            assert resp.status_code == 200
+            assert "text/event-stream" in resp.headers["content-type"]
+
+            lines = [line for line in resp.text.strip().split("\n\n") if line.startswith("data: ")]
+            su_kien = [json.loads(line[6:]) for line in lines]
+
+            assert len(su_kien) >= 3
+            assert su_kien[0]["loai"] == "bat_dau"
+            assert su_kien[-1]["loai"] == "xong"
+            assert su_kien[-1]["tang_phuc_vu"] == 1
+
+
+def test_trang_chu_phuc_vu_giao_dien_dashboard_va_chat():
+    """Kiểm tra trang chủ / trả về mã 200 và chứa đầy đủ cấu trúc Dashboard và Chat."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "view-dashboard" in resp.text
+    assert "view-chat" in resp.text
+    assert "Dashboard Trợ lý ảo" in resp.text
+    assert "nav-btn-dashboard" in resp.text
+    assert "nav-btn-chat" in resp.text
+    assert "btn-back-dashboard" in resp.text
+    assert "dash-quick-input" in resp.text
+

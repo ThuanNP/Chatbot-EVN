@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "PY=$(command -v python3 || command -v python) && \"$PY\" \"$CLAUDE_PROJECT_DIR/scripts/fix_markdown.py\" || true",
+            "timeout": 150,
+            "statusMessage": "Đang chuẩn hoá định dạng Markdown..."
+          }
+        ]
+      }
+    ]
+  }
+}

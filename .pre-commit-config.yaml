@@ -3,3 +3,12 @@ repos:
     rev: v8.30.0
     hooks:
       - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: markdownlint-fix
+        name: Tu dong sua dinh dang Markdown (markdownlint-cli2)
+        language: system
+        types: [markdown]
+        entry: npx --yes markdownlint-cli2 --fix
+        exclude: '^(\.venv/|node_modules/|\.pytest_cache/|\.remember/|\.agents/skills/)'

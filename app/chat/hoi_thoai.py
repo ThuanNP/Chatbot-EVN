@@ -208,10 +208,15 @@ def luu_tin_nhan(
     if vai_tro not in ("user", "assistant"):
         raise ValueError("vai_tro chỉ được phép nhận giá trị 'user' hoặc 'assistant'")
 
+    from app.core.bao_mat import che_du_lieu_ca_nhan
+
+    # Che dữ liệu cá nhân PII trước khi lưu vào cơ sở dữ liệu
+    noi_dung_an_toan = che_du_lieu_ca_nhan(noi_dung)
+
     # Tính toán xấp xỉ token nếu chưa có sẵn
     if token_uoc_tinh is None:
         from app.chat.ngu_canh import uoc_tinh_token
-        token_uoc_tinh = uoc_tinh_token(noi_dung)
+        token_uoc_tinh = uoc_tinh_token(noi_dung_an_toan)
 
     with lay_phien_db() as phien:
         hoi_thoai = phien.get(HoiThoai, hoi_thoai_id)
@@ -221,7 +226,7 @@ def luu_tin_nhan(
         tin_nhan = TinNhan(
             hoi_thoai_id=hoi_thoai_id,
             vai_tro=vai_tro,
-            noi_dung=noi_dung,
+            noi_dung=noi_dung_an_toan,
             token_uoc_tinh=token_uoc_tinh,
             tang_phuc_vu=tang_phuc_vu,
         )

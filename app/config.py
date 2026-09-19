@@ -143,6 +143,10 @@ class CaiDatMoiTruong(BaseSettings):
         default=False,
         description="Cờ cho phép ghi nội dung tin nhắn vào nhật ký (chỉ bật trong dev để gỡ lỗi)"
     )
+    GIOI_HAN_DO_DAI_TIN_NHAN: int = Field(
+        default=4000,
+        description="Độ dài ký tự tối đa của tin nhắn người dùng"
+    )
 
 
 class CauHinhHeThong(BaseModel):

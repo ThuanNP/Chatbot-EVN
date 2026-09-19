@@ -44,6 +44,16 @@ from app.chat.hoi_thoai import (
 )
 from app.chat.ngu_canh import dung_ngu_canh
 from app.config import lay_cau_hinh
+from app.core.bao_mat import (
+    LoiBaoMatError,
+    TiemLoiNhacError,
+    TinNhanQuaDaiError,
+    che_du_lieu_ca_nhan,
+    dong_khung_noi_dung_nguoi_dung,
+    kiem_duyet_dau_vao,
+    kiem_duyet_dau_ra,
+    kiem_tra_dau_vao,
+)
 from app.core.database import NguoiDung as NguoiDungDB, khoi_tao_db, lay_phien_db
 from app.core.nhat_ky import (
     dat_ma_yeu_cau,
@@ -423,6 +433,37 @@ async def xu_ly_vuot_ngan_sach(request: Request, exc: VuotNganSachError):
     )
     thong_diep = str(exc) or "Hệ thống đã đạt giới hạn ngân sách hàng ngày. Vui lòng thử lại sau."
     return tao_phan_hoi_loi(status.HTTP_503_SERVICE_UNAVAILABLE, thong_diep, ma_yeu_cau)
+
+
+@app.exception_handler(TinNhanQuaDaiError)
+async def xu_ly_tin_nhan_qua_dai(request: Request, exc: TinNhanQuaDaiError):
+    """Bắt lỗi khi độ dài tin nhắn người dùng vượt quá ngưỡng cho phép."""
+    ma_yeu_cau = lay_ma_yeu_cau(request)
+    ghi_nhat_ky(
+        chang="bao_mat",
+        thong_diep=f"[Bảo mật 400] {exc}",
+        do_tre_ms=0.0,
+        muc="WARNING",
+        ma_yeu_cau=ma_yeu_cau,
+        do_dai=exc.do_dai,
+        gioi_han=exc.gioi_han,
+    )
+    return tao_phan_hoi_loi(status.HTTP_400_BAD_REQUEST, str(exc), ma_yeu_cau)
+
+
+@app.exception_handler(TiemLoiNhacError)
+async def xu_ly_tiem_loi_nhac(request: Request, exc: TiemLoiNhacError):
+    """Bắt lỗi khi phát hiện mẫu tiêm lời nhắc cơ bản trong tin nhắn đầu vào."""
+    ma_yeu_cau = lay_ma_yeu_cau(request)
+    ghi_nhat_ky(
+        chang="bao_mat",
+        thong_diep=f"[Bảo mật 400] {exc}",
+        do_tre_ms=0.0,
+        muc="WARNING",
+        ma_yeu_cau=ma_yeu_cau,
+        mau_tiem=exc.mau_tiem,
+    )
+    return tao_phan_hoi_loi(status.HTTP_400_BAD_REQUEST, str(exc), ma_yeu_cau)
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -873,10 +914,25 @@ async def chat_stream(yeu_cau: YeuCauChatStream, request: Request):
 
     van_ban_user = chuan_hoa_van_ban_dau_vao(yeu_cau)
 
+    # Lớp 1: Kiểm tra đầu vào (độ dài ký tự và phát hiện tiêm lời nhắc)
+    kiem_tra_dau_vao(van_ban_user)
+
+    # Lớp 2: Điểm móc kiểm duyệt đầu vào (chỗ cắm dịch vụ kiểm duyệt khi cần)
+    kd_vao = await kiem_duyet_dau_vao(van_ban_user)
+    if not kd_vao.hop_le:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=kd_vao.ly_do or "Nội dung yêu cầu vi phạm chính sách kiểm duyệt.",
+        )
+    van_ban_user = kd_vao.van_ban
+
+    # Lớp 3: Củng cố lời nhắc hệ thống - đóng khung ranh giới câu hỏi người dùng
+    van_ban_gui_llm = dong_khung_noi_dung_nguoi_dung(van_ban_user)
+
     # 4. Dựng ngữ cảnh có lịch sử cắt tỉa an toàn theo cặp
     tin_nhan_gui_llm = dung_ngu_canh(
         hoi_thoai_id=hoi_thoai_id,
-        tin_nhan_moi=van_ban_user,
+        tin_nhan_moi=van_ban_gui_llm,
     )
 
     # Chuẩn bị tham số gọi mô hình
@@ -914,20 +970,26 @@ async def chat_stream(yeu_cau: YeuCauChatStream, request: Request):
                     yield f"data: {json.dumps(du_lieu, ensure_ascii=False)}\n\n"
 
                 elif manh.loai == "xong":
-                    # Chặng 5: luu_hoi_thoai
+                    # Lớp 2: Điểm móc kiểm duyệt đầu ra (chỗ cắm dịch vụ kiểm duyệt khi cần)
+                    cau_tra_loi_cuoi = manh.noi_dung or van_ban_tich_luy
+                    kd_ra = await kiem_duyet_dau_ra(cau_tra_loi_cuoi)
+                    cau_tra_loi_cuoi = kd_ra.van_ban
+
+                    # Chặng 5: luu_hoi_thoai (Lớp 1: Che dữ liệu cá nhân PII trước khi lưu DB)
                     t_db = time.perf_counter()
                     try:
                         if van_ban_user:
+                            van_ban_user_da_che = che_du_lieu_ca_nhan(van_ban_user)
                             luu_tin_nhan(
                                 hoi_thoai_id=hoi_thoai_id,
                                 vai_tro="user",
-                                noi_dung=van_ban_user,
+                                noi_dung=van_ban_user_da_che,
                             )
-                        cau_tra_loi_cuoi = manh.noi_dung or van_ban_tich_luy
+                        cau_tra_loi_da_che = che_du_lieu_ca_nhan(cau_tra_loi_cuoi)
                         luu_tin_nhan(
                             hoi_thoai_id=hoi_thoai_id,
                             vai_tro="assistant",
-                            noi_dung=cau_tra_loi_cuoi,
+                            noi_dung=cau_tra_loi_da_che,
                             tang_phuc_vu=manh.tang_phuc_vu,
                             token_uoc_tinh=manh.token_ra,
                         )
@@ -1082,10 +1144,25 @@ async def chat_dong_bo(yeu_cau: YeuCauChat, request: Request):
 
     van_ban_user = chuan_hoa_van_ban_dau_vao(yeu_cau)
 
+    # Lớp 1: Kiểm tra đầu vào (độ dài ký tự và phát hiện tiêm lời nhắc)
+    kiem_tra_dau_vao(van_ban_user)
+
+    # Lớp 2: Điểm móc kiểm duyệt đầu vào (chỗ cắm dịch vụ kiểm duyệt khi cần)
+    kd_vao = await kiem_duyet_dau_vao(van_ban_user)
+    if not kd_vao.hop_le:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=kd_vao.ly_do or "Nội dung yêu cầu vi phạm chính sách kiểm duyệt.",
+        )
+    van_ban_user = kd_vao.van_ban
+
+    # Lớp 3: Củng cố lời nhắc hệ thống - đóng khung ranh giới câu hỏi người dùng
+    van_ban_gui_llm = dong_khung_noi_dung_nguoi_dung(van_ban_user)
+
     # 4. Dựng ngữ cảnh hội thoại (Chặng 3: dung_ngu_canh được ghi nhận tự động trong dung_ngu_canh)
     tin_nhan_gui_llm = dung_ngu_canh(
         hoi_thoai_id=hoi_thoai_id,
-        tin_nhan_moi=van_ban_user,
+        tin_nhan_moi=van_ban_gui_llm,
     )
 
     # Chuẩn bị tham số
@@ -1118,19 +1195,25 @@ async def chat_dong_bo(yeu_cau: YeuCauChat, request: Request):
 
     cau_tra_loi = str(ket_qua.noi_dung or "")
 
-    # Chặng 5: luu_hoi_thoai
+    # Lớp 2: Điểm móc kiểm duyệt đầu ra (chỗ cắm dịch vụ kiểm duyệt khi cần)
+    kd_ra = await kiem_duyet_dau_ra(cau_tra_loi)
+    cau_tra_loi = kd_ra.van_ban
+
+    # Chặng 5: luu_hoi_thoai (Lớp 1: Che dữ liệu cá nhân PII trước khi lưu DB)
     t_db = time.perf_counter()
     try:
         if van_ban_user:
+            van_ban_user_da_che = che_du_lieu_ca_nhan(van_ban_user)
             luu_tin_nhan(
                 hoi_thoai_id=hoi_thoai_id,
                 vai_tro="user",
-                noi_dung=van_ban_user,
+                noi_dung=van_ban_user_da_che,
             )
+        cau_tra_loi_da_che = che_du_lieu_ca_nhan(cau_tra_loi)
         luu_tin_nhan(
             hoi_thoai_id=hoi_thoai_id,
             vai_tro="assistant",
-            noi_dung=cau_tra_loi,
+            noi_dung=cau_tra_loi_da_che,
             tang_phuc_vu=ket_qua.tang_phuc_vu,
             token_uoc_tinh=ket_qua.token_ra,
         )

@@ -1,4 +1,3 @@
 {
-  "comment": "Nội dung trong prompts/ được gửi thẳng tới mô hình. Bẻ dòng để thoả MD013 sẽ làm đổi văn bản mô hình nhận, nên tắt MD013 tại đây. Các rule cấu trúc khác vẫn giữ nguyên.",
   "MD013": false
 }
